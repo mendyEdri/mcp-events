@@ -1,0 +1,21 @@
+{
+  "name": "mock-apns-example",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start:mock-apns": "npx tsx mock-apns-server.ts",
+    "start:hub": "npx tsx hub-with-apns.ts",
+    "start:client": "npx tsx client.ts",
+    "test:apns": "npx tsx test-apns-direct.ts"
+  },
+  "dependencies": {
+    "@esmcp/client": "workspace:*",
+    "@esmcp/server": "workspace:*",
+    "@esmcp/apns": "workspace:*",
+    "@esmcp/core": "workspace:*"
+  },
+  "devDependencies": {
+    "tsx": "^4.0.0"
+  }
+}

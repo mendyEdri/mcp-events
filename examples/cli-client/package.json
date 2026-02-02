@@ -1,0 +1,17 @@
+{
+  "name": "esmcp-cli-client-example",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "tsx client.ts",
+    "dev": "tsx client.ts --interactive"
+  },
+  "dependencies": {
+    "@esmcp/client": "workspace:*",
+    "@esmcp/core": "workspace:*"
+  },
+  "devDependencies": {
+    "tsx": "^4.7.0"
+  }
+}

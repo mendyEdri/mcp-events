@@ -1,0 +1,14 @@
+{
+  "sessions": [
+    {
+      "name": "_autosave",
+      "created_at": "2026-02-02T22:26:43.316611Z",
+      "updated_at": "2026-02-02T22:27:55.952475Z",
+      "message_count": 10,
+      "model": "accounts/fireworks/models/kimi-k2p5",
+      "mode": "code",
+      "summary": "{\"success\": true, \"data\": {\"path\": \"packages/client/src/client/client.ts\", \"content\": \"import type {"
+    }
+  ],
+  "active": null
+}

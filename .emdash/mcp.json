@@ -1,0 +1,34 @@
+{
+  "mcpServers": {
+    "github": {
+      "command": "github-mcp-server",
+      "args": [
+        "stdio"
+      ],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}"
+      },
+      "enabled": false,
+      "timeout": 30
+    },
+    "emdash-graph": {
+      "command": "emdash-graph-mcp",
+      "args": [
+        "--db-path",
+        "${EMDASH_GRAPH_DB_PATH}"
+      ],
+      "env": {
+        "EMDASH_GRAPH_DB_PATH": "${EMDASH_GRAPH_DB_PATH}"
+      },
+      "enabled": false,
+      "timeout": 30
+    },
+    "web-tools": {
+      "command": "emdash-web-tools-mcp",
+      "args": [],
+      "env": {},
+      "enabled": true,
+      "timeout": 60
+    }
+  }
+}

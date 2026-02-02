@@ -1,0 +1,16 @@
+{
+  "name": "sse-demo",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start:server": "npx tsx server.ts"
+  },
+  "dependencies": {
+    "@esmcp/sse": "workspace:*",
+    "@esmcp/core": "workspace:*"
+  },
+  "devDependencies": {
+    "tsx": "^4.0.0"
+  }
+}
