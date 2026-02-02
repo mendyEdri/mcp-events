@@ -5,6 +5,8 @@ import type {
   ServerCapabilities,
   InitializeResult,
   ESMCPEvent,
+  ASPCapabilities,
+  ASPSchemaResponse,
 } from '@esmcp/core';
 import {
   PROTOCOL_VERSION,
@@ -20,6 +22,12 @@ import {
   EventAcknowledgeParamsSchema,
   DeviceRegisterParamsSchema,
   DeviceInvalidateParamsSchema,
+  SubscriptionPauseParamsSchema,
+  SubscriptionResumeParamsSchema,
+  SchemaRequestParamsSchema,
+  ASPMethods,
+  ASP_PROTOCOL_VERSION,
+  ASPOperationDefinitions,
 } from '@esmcp/core';
 import {
   WebSocketServerTransport,
@@ -35,6 +43,10 @@ export interface EventHubOptions {
   serverInfo?: ServerInfo;
   maxSubscriptionsPerClient?: number;
   supportedProviders?: string[];
+  /** Enable APNS push notifications */
+  apnsEnabled?: boolean;
+  /** Enable WebPush notifications */
+  webPushEnabled?: boolean;
 }
 
 export class EventHub {
@@ -43,6 +55,7 @@ export class EventHub {
   private deviceStore: DeviceStore;
   private serverInfo: ServerInfo;
   private serverCapabilities: ServerCapabilities;
+  private aspCapabilities: ASPCapabilities;
 
   constructor(options: EventHubOptions) {
     this.transport = new WebSocketServerTransport({
@@ -58,13 +71,42 @@ export class EventHub {
     this.deviceStore = new MemoryDeviceStore();
 
     this.serverInfo = options.serverInfo ?? {
-      name: 'ESMCP Hub',
+      name: 'ASP Hub',
       version: '1.0.0',
     };
 
     this.serverCapabilities = {
       maxSubscriptions: options.maxSubscriptionsPerClient ?? 100,
-      supportedProviders: options.supportedProviders ?? ['github', 'gmail', 'slack'],
+      supportedProviders: options.supportedProviders ?? ['github', 'gmail', 'slack', 'custom'],
+    };
+
+    // Build full ASP capabilities
+    this.aspCapabilities = {
+      protocolVersion: ASP_PROTOCOL_VERSION,
+      protocolName: 'asp',
+      serverInfo: this.serverInfo,
+      subscriptions: {
+        maxActive: options.maxSubscriptionsPerClient ?? 100,
+        maxFiltersPerSubscription: 10,
+        supportsPause: true,
+        supportsExpiration: true,
+        supportsBatching: true,
+      },
+      filters: {
+        supportedSources: options.supportedProviders ?? ['github', 'gmail', 'slack', 'custom'],
+        supportsWildcardTypes: true,
+        supportsTagFiltering: true,
+        supportsPriorityFiltering: true,
+      },
+      delivery: {
+        supportedChannels: ['websocket', 'sse', 'webpush', 'apns'],
+        supportedPriorities: ['realtime', 'normal', 'batch'],
+        supportsMultiChannel: true,
+      },
+      push: {
+        apnsEnabled: options.apnsEnabled ?? false,
+        webPushEnabled: options.webPushEnabled ?? false,
+      },
     };
 
     this.setupTransportHandlers();
@@ -124,30 +166,52 @@ export class EventHub {
       let result: unknown;
 
       switch (request.method) {
-        case 'initialize':
+        // Core protocol
+        case ASPMethods.Initialize:
           result = await this.handleInitialize(client, request.params);
           break;
-        case 'subscriptions/create':
+
+        // ASP Capability & Schema Discovery
+        case ASPMethods.GetCapabilities:
+          result = await this.handleGetCapabilities(client);
+          break;
+        case ASPMethods.GetSchema:
+          result = await this.handleGetSchema(client, request.params);
+          break;
+
+        // Subscription Management
+        case ASPMethods.SubscriptionCreate:
           result = await this.handleSubscriptionCreate(client, request.params);
           break;
-        case 'subscriptions/remove':
+        case ASPMethods.SubscriptionRemove:
           result = await this.handleSubscriptionRemove(client, request.params);
           break;
-        case 'subscriptions/list':
+        case ASPMethods.SubscriptionList:
           result = await this.handleSubscriptionList(client, request.params);
           break;
-        case 'subscriptions/update':
+        case ASPMethods.SubscriptionUpdate:
           result = await this.handleSubscriptionUpdate(client, request.params);
           break;
-        case 'events/acknowledge':
+        case ASPMethods.SubscriptionPause:
+          result = await this.handleSubscriptionPause(client, request.params);
+          break;
+        case ASPMethods.SubscriptionResume:
+          result = await this.handleSubscriptionResume(client, request.params);
+          break;
+
+        // Event Operations
+        case ASPMethods.EventAcknowledge:
           result = await this.handleEventAcknowledge(client, request.params);
           break;
-        case 'devices/register':
+
+        // Device Management
+        case ASPMethods.DeviceRegister:
           result = await this.handleDeviceRegister(client, request.params);
           break;
-        case 'devices/invalidate':
+        case ASPMethods.DeviceInvalidate:
           result = await this.handleDeviceInvalidate(client, request.params);
           break;
+
         default:
           throw { code: ErrorCodes.MethodNotFound, message: 'Method not found' };
       }
@@ -184,6 +248,40 @@ export class EventHub {
       serverInfo: this.serverInfo,
       capabilities: this.serverCapabilities,
     };
+  }
+
+  /**
+   * Handle ASP capability discovery request
+   * Returns full server capabilities for agent introspection
+   */
+  private async handleGetCapabilities(
+    client: ClientConnection
+  ): Promise<ASPCapabilities> {
+    this.ensureInitialized(client);
+    return this.aspCapabilities;
+  }
+
+  /**
+   * Handle ASP schema discovery request
+   * Returns operation schemas for LLM reasoning
+   */
+  private async handleGetSchema(
+    client: ClientConnection,
+    params: unknown
+  ): Promise<ASPSchemaResponse> {
+    this.ensureInitialized(client);
+    const parsed = SchemaRequestParamsSchema.parse(params || {});
+
+    // Filter operations if specific ones requested
+    if (parsed.operations && parsed.operations.length > 0) {
+      return {
+        operations: ASPOperationDefinitions.filter((op) =>
+          parsed.operations!.includes(op.name)
+        ),
+      };
+    }
+
+    return { operations: ASPOperationDefinitions };
   }
 
   private async handleSubscriptionCreate(
@@ -245,6 +343,52 @@ export class EventHub {
       };
     }
     return updated;
+  }
+
+  /**
+   * Handle subscription pause request
+   */
+  private async handleSubscriptionPause(
+    client: ClientConnection,
+    params: unknown
+  ) {
+    this.ensureInitialized(client);
+    const parsed = SubscriptionPauseParamsSchema.parse(params);
+    const updated = await this.subscriptionManager.update(
+      parsed.subscriptionId,
+      client.id,
+      { status: 'paused' }
+    );
+    if (!updated) {
+      throw {
+        code: ErrorCodes.SubscriptionNotFound,
+        message: 'Subscription not found',
+      };
+    }
+    return { success: true, status: 'paused' as const };
+  }
+
+  /**
+   * Handle subscription resume request
+   */
+  private async handleSubscriptionResume(
+    client: ClientConnection,
+    params: unknown
+  ) {
+    this.ensureInitialized(client);
+    const parsed = SubscriptionResumeParamsSchema.parse(params);
+    const updated = await this.subscriptionManager.update(
+      parsed.subscriptionId,
+      client.id,
+      { status: 'active' }
+    );
+    if (!updated) {
+      throw {
+        code: ErrorCodes.SubscriptionNotFound,
+        message: 'Subscription not found',
+      };
+    }
+    return { success: true, status: 'active' as const };
   }
 
   private async handleEventAcknowledge(

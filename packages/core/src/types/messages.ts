@@ -5,8 +5,15 @@ import {
   CreateSubscriptionRequestSchema,
   UpdateSubscriptionRequestSchema,
 } from './subscriptions.js';
+import {
+  ASP_PROTOCOL_VERSION,
+  ASPCapabilitiesSchema,
+  ASPSchemaResponseSchema,
+  ASPOperationDefinitions,
+} from './protocol.js';
 
-export const PROTOCOL_VERSION = '2025-01-01';
+// Use ASP protocol version
+export const PROTOCOL_VERSION = ASP_PROTOCOL_VERSION;
 
 export const ClientInfoSchema = z.object({
   name: z.string(),
@@ -163,6 +170,52 @@ export const DeviceInvalidateResultSchema = z.object({
 });
 export type DeviceInvalidateResult = z.infer<typeof DeviceInvalidateResultSchema>;
 
+// ASP Capability Discovery
+export const CapabilitiesRequestParamsSchema = z.object({}).optional();
+export type CapabilitiesRequestParams = z.infer<typeof CapabilitiesRequestParamsSchema>;
+
+export const CapabilitiesResultSchema = ASPCapabilitiesSchema;
+export type CapabilitiesResult = z.infer<typeof CapabilitiesResultSchema>;
+
+// ASP Schema Discovery
+export const SchemaRequestParamsSchema = z.object({
+  operations: z.array(z.string()).optional().describe('Filter to specific operations'),
+});
+export type SchemaRequestParams = z.infer<typeof SchemaRequestParamsSchema>;
+
+export const SchemaResultSchema = ASPSchemaResponseSchema;
+export type SchemaResult = z.infer<typeof SchemaResultSchema>;
+
+// Subscription Pause/Resume
+export const SubscriptionPauseParamsSchema = z.object({
+  subscriptionId: z.string().uuid(),
+});
+export type SubscriptionPauseParams = z.infer<typeof SubscriptionPauseParamsSchema>;
+
+export const SubscriptionPauseResultSchema = z.object({
+  success: z.boolean(),
+  status: z.literal('paused'),
+});
+export type SubscriptionPauseResult = z.infer<typeof SubscriptionPauseResultSchema>;
+
+export const SubscriptionResumeParamsSchema = z.object({
+  subscriptionId: z.string().uuid(),
+});
+export type SubscriptionResumeParams = z.infer<typeof SubscriptionResumeParamsSchema>;
+
+export const SubscriptionResumeResultSchema = z.object({
+  success: z.boolean(),
+  status: z.literal('active'),
+});
+export type SubscriptionResumeResult = z.infer<typeof SubscriptionResumeResultSchema>;
+
+// Subscription Expired Notification
+export const SubscriptionExpiredNotificationParamsSchema = z.object({
+  subscriptionId: z.string().uuid(),
+  expiredAt: z.string().datetime(),
+});
+export type SubscriptionExpiredNotificationParams = z.infer<typeof SubscriptionExpiredNotificationParamsSchema>;
+
 // Error codes
 export const ErrorCodes = {
   ParseError: -32700,
@@ -227,5 +280,20 @@ export function createJsonRpcNotification(
     jsonrpc: '2.0',
     method,
     ...(params && { params }),
+  };
+}
+
+/**
+ * Get ASP operation definitions for schema discovery
+ * Optionally filter by operation names
+ */
+export function getASPOperations(operationNames?: string[]) {
+  if (!operationNames || operationNames.length === 0) {
+    return { operations: ASPOperationDefinitions };
+  }
+  return {
+    operations: ASPOperationDefinitions.filter((op) =>
+      operationNames.includes(op.name)
+    ),
   };
 }
