@@ -1,0 +1,21 @@
+{
+  "name": "esmcp-slack-notifier",
+  "version": "1.0.0",
+  "description": "Send Slack notifications for high-priority ESMCP events",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "tsx subscriber.ts",
+    "dev": "tsx subscriber.ts",
+    "docker:build": "docker build -t esmcp-slack-notifier .",
+    "docker:run": "docker run -e SLACK_BOT_TOKEN=$SLACK_BOT_TOKEN -e SLACK_CHANNEL=$SLACK_CHANNEL esmcp-slack-notifier"
+  },
+  "dependencies": {
+    "@esmcp/client": "workspace:*",
+    "@esmcp/core": "workspace:*"
+  },
+  "devDependencies": {
+    "tsx": "^4.7.0",
+    "@types/node": "^20.10.0"
+  }
+}

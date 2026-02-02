@@ -1,0 +1,17 @@
+{
+  "name": "esmcp-webhook-forwarder",
+  "version": "1.0.0",
+  "description": "Forward ESMCP events to external webhooks",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "tsx subscriber.ts"
+  },
+  "dependencies": {
+    "@esmcp/client": "workspace:*",
+    "@esmcp/core": "workspace:*"
+  },
+  "devDependencies": {
+    "tsx": "^4.7.0"
+  }
+}

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { v4 as uuidv4 } from 'uuid';
 
 export const EventSourceSchema = z.enum([
   'github',
@@ -83,7 +84,6 @@ export function createEvent(
   data: Record<string, unknown>,
   metadata: Omit<EventMetadata, 'timestamp'> & { timestamp?: string }
 ): ESMCPEvent {
-  const { v4: uuidv4 } = require('uuid');
   return {
     id: uuidv4(),
     type,

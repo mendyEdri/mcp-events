@@ -1,0 +1,19 @@
+{
+  "name": "esmcp-email-digest",
+  "version": "1.0.0",
+  "description": "Send batched email digests of ESMCP events",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "tsx subscriber.ts"
+  },
+  "dependencies": {
+    "@esmcp/client": "workspace:*",
+    "@esmcp/core": "workspace:*",
+    "nodemailer": "^6.9.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.7.0",
+    "@types/nodemailer": "^6.4.0"
+  }
+}

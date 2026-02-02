@@ -1,0 +1,17 @@
+{
+  "name": "esmcp-test-integration",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "tsx server.ts",
+    "test": "echo 'Run: pnpm start' in one terminal and 'cd ../cli-client && npx tsx client.ts' in another"
+  },
+  "dependencies": {
+    "@esmcp/server": "workspace:*",
+    "@esmcp/core": "workspace:*"
+  },
+  "devDependencies": {
+    "tsx": "^4.7.0"
+  }
+}
