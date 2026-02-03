@@ -15,6 +15,14 @@ import {
   importMCPConfig,
   exportMCPConfig,
 } from './mcp-config.js';
+import {
+  getEventsServer,
+  publishEvent,
+  createSampleEvent,
+  createAlertEvent,
+  getDemoInfo,
+} from './events-demo.js';
+import { createEvent } from '@mcpe/core';
 
 // Request validation schemas
 const RegisterRequestSchema = z.object({
@@ -658,6 +666,160 @@ export function createApp(): Hono {
         500
       );
     }
+  });
+
+  // ============ Events Demo API ============
+
+  // Get demo info
+  app.get('/demo', (c) => {
+    const info = getDemoInfo();
+    return c.json({
+      success: true,
+      ...info,
+      usage: {
+        publish: 'POST /publish with { type, source, data, priority? }',
+        quickPublish: 'POST /publish/github, /publish/slack, /publish/alert',
+        subscribe: `Open ${info.subscribeUrl} in browser or run: curl -s ${info.ntfyUrl}/json`,
+      },
+    });
+  });
+
+  // Publish a custom event
+  app.post('/publish', async (c) => {
+    try {
+      const body = await c.req.json();
+      const { type, source, data, priority, tags } = body as {
+        type: string;
+        source?: 'github' | 'gmail' | 'slack' | 'custom';
+        data?: Record<string, unknown>;
+        priority?: 'low' | 'normal' | 'high' | 'critical';
+        tags?: string[];
+      };
+
+      if (!type) {
+        return c.json({ success: false, error: 'type is required' }, 400);
+      }
+
+      const event = createEvent(
+        type,
+        data || {},
+        {
+          source: source || 'custom',
+          priority: priority || 'normal',
+          tags,
+        }
+      );
+
+      const result = await publishEvent(event);
+
+      return c.json({
+        success: true,
+        event: {
+          id: event.id,
+          type: event.type,
+          source: event.metadata.source,
+        },
+        matchedSubscriptions: result.matchedSubscriptions,
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      return c.json({ success: false, error: errorMessage }, 500);
+    }
+  });
+
+  // Quick publish: GitHub event
+  app.post('/publish/github', async (c) => {
+    try {
+      const body = await c.req.json().catch(() => ({}));
+      const { subtype, data } = body as { subtype?: string; data?: Record<string, unknown> };
+
+      const event = createSampleEvent('github', subtype);
+      if (data) {
+        Object.assign(event.data, data);
+      }
+
+      const result = await publishEvent(event);
+
+      return c.json({
+        success: true,
+        event: { id: event.id, type: event.type },
+        matchedSubscriptions: result.matchedSubscriptions,
+        message: 'GitHub event published! Check ntfy.sh for notifications.',
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      return c.json({ success: false, error: errorMessage }, 500);
+    }
+  });
+
+  // Quick publish: Slack event
+  app.post('/publish/slack', async (c) => {
+    try {
+      const body = await c.req.json().catch(() => ({}));
+      const { message, channel } = body as { message?: string; channel?: string };
+
+      const event = createSampleEvent('slack', 'slack.message.posted');
+      event.data.text = message || 'Hello from MCPE demo!';
+      event.data.channel = channel || '#general';
+
+      const result = await publishEvent(event);
+
+      return c.json({
+        success: true,
+        event: { id: event.id, type: event.type },
+        matchedSubscriptions: result.matchedSubscriptions,
+        message: 'Slack event published! Check ntfy.sh for notifications.',
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      return c.json({ success: false, error: errorMessage }, 500);
+    }
+  });
+
+  // Quick publish: Alert (high priority)
+  app.post('/publish/alert', async (c) => {
+    try {
+      const body = await c.req.json().catch(() => ({}));
+      const { title, message, priority } = body as {
+        title?: string;
+        message?: string;
+        priority?: 'high' | 'critical';
+      };
+
+      const event = createAlertEvent(
+        title || 'Demo Alert',
+        message || 'This is a test alert from MCPE',
+        priority || 'high'
+      );
+
+      const result = await publishEvent(event);
+
+      return c.json({
+        success: true,
+        event: { id: event.id, type: event.type, priority: event.metadata.priority },
+        matchedSubscriptions: result.matchedSubscriptions,
+        message: 'Alert published! Check ntfy.sh for notifications.',
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      return c.json({ success: false, error: errorMessage }, 500);
+    }
+  });
+
+  // List demo subscriptions
+  app.get('/demo/subscriptions', (c) => {
+    const server = getEventsServer();
+    const subscriptions = server.subscriptionManager.listByClient('demo');
+
+    return c.json({
+      success: true,
+      subscriptions: subscriptions.map(s => ({
+        id: s.id,
+        status: s.status,
+        filter: s.filter,
+        handler: s.handler ? { type: s.handler.type } : undefined,
+      })),
+    });
   });
 
   return app;

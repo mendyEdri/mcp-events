@@ -1,0 +1,78 @@
+{
+  "$schema": "./packages/mcpe/dist/types/config.js",
+  "version": "1.0",
+  "defaults": {
+    "delivery": {
+      "channels": ["realtime"]
+    }
+  },
+  "subscriptions": [
+    {
+      "name": "github-ci-failures",
+      "description": "Run a script when CI fails",
+      "filter": {
+        "sources": ["github"],
+        "eventTypes": ["github.workflow_run.failed", "github.check_run.failed"]
+      },
+      "handler": {
+        "type": "bash",
+        "command": "notify-send",
+        "args": ["CI Failed!", "Check the workflow run"],
+        "input": "env",
+        "timeout": 5000
+      }
+    },
+    {
+      "name": "slack-mentions-agent",
+      "description": "Have an AI agent summarize and respond to Slack mentions",
+      "filter": {
+        "sources": ["slack"],
+        "eventTypes": ["slack.message.mention"]
+      },
+      "handler": {
+        "type": "agent",
+        "systemPrompt": "You are a helpful assistant. When you receive a Slack mention, summarize what the person is asking and suggest a helpful response.",
+        "model": "gpt-4",
+        "instructions": "Be concise and professional. If the message requires action, list the next steps."
+      }
+    },
+    {
+      "name": "email-digest",
+      "description": "Daily digest of important emails",
+      "filter": {
+        "sources": ["gmail"],
+        "eventTypes": ["gmail.message.received"],
+        "priority": ["high", "critical"]
+      },
+      "delivery": {
+        "channels": ["cron"],
+        "cronSchedule": {
+          "expression": "@daily",
+          "timezone": "America/New_York",
+          "aggregateEvents": true,
+          "maxEventsPerDelivery": 50
+        }
+      },
+      "handler": {
+        "type": "agent",
+        "systemPrompt": "Summarize these emails into a brief daily digest. Highlight urgent items first.",
+        "model": "gpt-4"
+      }
+    },
+    {
+      "name": "webhook-events",
+      "description": "Forward all critical events to a webhook",
+      "filter": {
+        "priority": ["critical"]
+      },
+      "handler": {
+        "type": "webhook",
+        "url": "https://your-server.com/webhook/events",
+        "headers": {
+          "Authorization": "Bearer ${WEBHOOK_TOKEN}"
+        },
+        "timeout": 5000
+      }
+    }
+  ]
+}

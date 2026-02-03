@@ -8,6 +8,7 @@ import {
   type CreateSubscriptionRequest,
   EventFilterSchema,
   DeliveryPreferencesSchema,
+  EventHandlerSchema,
   DEFAULT_EVENTS_CAPABILITY,
   MCPE_NOTIFICATIONS,
   MCPE_TOOLS,
@@ -15,6 +16,7 @@ import {
   type EventMetadata,
 } from '../types/index.js';
 import { SubscriptionManager } from './subscription-manager.js';
+import { HandlerExecutor, type HandlerExecutorConfig } from './handler-executor.js';
 
 /**
  * Options for creating an EventsServer
@@ -23,6 +25,8 @@ export interface EventsServerConfig {
   name: string;
   version: string;
   events?: EventsServerOptions;
+  /** Handler executor configuration for executing event handlers */
+  handlers?: HandlerExecutorConfig;
 }
 
 /**
@@ -57,6 +61,7 @@ export interface EventsServerConfig {
 export class EventsServer {
   readonly mcpServer: McpServer;
   readonly subscriptionManager: SubscriptionManager;
+  readonly handlerExecutor: HandlerExecutor;
   private readonly eventsCapability: EventsCapability;
   private clientId: string = 'default';
 
@@ -69,12 +74,14 @@ export class EventsServer {
     if (configOrServer instanceof McpServer) {
       this.mcpServer = configOrServer;
       this.eventsCapability = this.buildCapability(options);
+      this.handlerExecutor = new HandlerExecutor();
     } else {
       this.mcpServer = new McpServer(
         { name: configOrServer.name, version: configOrServer.version },
         { capabilities: {} }
       );
       this.eventsCapability = this.buildCapability(configOrServer.events);
+      this.handlerExecutor = new HandlerExecutor(configOrServer.handlers);
     }
 
     this.subscriptionManager = new SubscriptionManager({
@@ -111,10 +118,11 @@ export class EventsServer {
     this.mcpServer.registerTool(
       MCPE_TOOLS.SUBSCRIBE,
       {
-        description: 'Subscribe to events matching a filter',
+        description: 'Subscribe to events matching a filter with optional handler',
         inputSchema: {
           filter: EventFilterSchema.optional(),
           delivery: DeliveryPreferencesSchema.optional(),
+          handler: EventHandlerSchema.optional(),
           expiresAt: z.string().datetime().optional(),
         },
       },
@@ -122,6 +130,7 @@ export class EventsServer {
         const request: CreateSubscriptionRequest = {
           filter: args.filter ?? {},
           delivery: args.delivery ?? { channels: ['realtime'] },
+          handler: args.handler,
           expiresAt: args.expiresAt,
         };
 
@@ -135,6 +144,7 @@ export class EventsServer {
                 status: subscription.status,
                 filter: subscription.filter,
                 delivery: subscription.delivery,
+                handler: subscription.handler ? { type: subscription.handler.type } : undefined,
                 createdAt: subscription.createdAt,
                 expiresAt: subscription.expiresAt,
               }),
@@ -339,6 +349,18 @@ export class EventsServer {
       } catch (error) {
         // Log error but don't throw - other subscriptions should still receive
         console.error(`Failed to send event notification to subscription ${subscription.id}:`, error);
+      }
+    }
+
+    // Execute handler if configured
+    if (subscription.handler) {
+      try {
+        const result = await this.handlerExecutor.execute(event, subscription.handler, subscription.id);
+        if (!result.success) {
+          console.error(`Handler failed for subscription ${subscription.id}:`, result.error);
+        }
+      } catch (error) {
+        console.error(`Handler execution error for subscription ${subscription.id}:`, error);
       }
     }
 

@@ -16,6 +16,16 @@ export {
 
 // Subscription types
 export {
+  // Event handlers
+  BashEventHandlerSchema,
+  AgentEventHandlerSchema,
+  WebhookEventHandlerSchema,
+  EventHandlerSchema,
+  type BashEventHandler,
+  type AgentEventHandler,
+  type WebhookEventHandler,
+  type EventHandler,
+  // Delivery
   DeliveryChannelSchema,
   CronScheduleSchema,
   ScheduledDeliverySchema,
@@ -45,3 +55,13 @@ export {
   type EventsCapability,
   type EventsServerOptions,
 } from './capabilities.js';
+
+// Config types (mcpe.json)
+export {
+  SubscriptionConfigSchema,
+  MCPEConfigSchema,
+  parseMCPEConfig,
+  validateMCPEConfig,
+  type SubscriptionConfig,
+  type MCPEConfig,
+} from './config.js';

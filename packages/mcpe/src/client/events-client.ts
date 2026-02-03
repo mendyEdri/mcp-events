@@ -13,17 +13,17 @@ import { matchesPattern } from '../utils/matching.js';
 /**
  * Event handler function type
  */
-export type EventHandler = (event: MCPEvent, subscriptionId: string) => void | Promise<void>;
+export type EventCallback = (event: MCPEvent, subscriptionId: string) => void | Promise<void>;
 
 /**
  * Batch event handler function type
  */
-export type BatchEventHandler = (events: MCPEvent[], subscriptionId: string) => void | Promise<void>;
+export type BatchEventCallback = (events: MCPEvent[], subscriptionId: string) => void | Promise<void>;
 
 /**
  * Subscription expired handler function type
  */
-export type SubscriptionExpiredHandler = (subscriptionId: string) => void | Promise<void>;
+export type SubscriptionExpiredCallback = (subscriptionId: string) => void | Promise<void>;
 
 /**
  * Configuration for EventsClient
@@ -90,9 +90,9 @@ export interface ListSubscriptionsResult {
  */
 export class EventsClient {
   readonly mcpClient: Client;
-  private eventHandlers: Map<string, EventHandler[]> = new Map();
-  private batchHandlers: BatchEventHandler[] = [];
-  private subscriptionExpiredHandlers: SubscriptionExpiredHandler[] = [];
+  private eventHandlers: Map<string, EventCallback[]> = new Map();
+  private batchHandlers: BatchEventCallback[] = [];
+  private subscriptionExpiredHandlers: SubscriptionExpiredCallback[] = [];
   private _supportsEvents: boolean = false;
 
   constructor(config: EventsClientConfig);
@@ -320,7 +320,7 @@ export class EventsClient {
    * @param handler - Function to call when matching events are received
    * @returns A function to remove the handler
    */
-  onEvent(pattern: string, handler: EventHandler): () => void {
+  onEvent(pattern: string, handler: EventCallback): () => void {
     const handlers = this.eventHandlers.get(pattern) || [];
     handlers.push(handler);
     this.eventHandlers.set(pattern, handlers);
@@ -342,7 +342,7 @@ export class EventsClient {
   /**
    * Register a handler for batch event delivery
    */
-  onBatch(handler: BatchEventHandler): () => void {
+  onBatch(handler: BatchEventCallback): () => void {
     this.batchHandlers.push(handler);
 
     return () => {
@@ -356,7 +356,7 @@ export class EventsClient {
   /**
    * Register a handler for subscription expiration
    */
-  onSubscriptionExpired(handler: SubscriptionExpiredHandler): () => void {
+  onSubscriptionExpired(handler: SubscriptionExpiredCallback): () => void {
     this.subscriptionExpiredHandlers.push(handler);
 
     return () => {

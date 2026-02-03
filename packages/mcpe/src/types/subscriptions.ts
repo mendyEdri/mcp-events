@@ -2,6 +2,73 @@ import { z } from 'zod';
 import { EventFilterSchema } from './events.js';
 
 /**
+ * Bash command event handler
+ * Executes a shell command when events are received.
+ * Event data is passed via stdin as JSON or as environment variables.
+ */
+export const BashEventHandlerSchema = z.object({
+  type: z.literal('bash'),
+  command: z.string().describe('Shell command to execute'),
+  args: z.array(z.string()).optional().describe('Command arguments'),
+  cwd: z.string().optional().describe('Working directory'),
+  env: z.record(z.string()).optional().describe('Additional environment variables'),
+  /** How to pass event data to the command */
+  input: z.enum(['stdin', 'env', 'args']).default('stdin').describe(
+    'stdin: JSON via stdin, env: as MCPE_EVENT_* vars, args: as command arguments'
+  ),
+  /** Timeout in milliseconds */
+  timeout: z.number().default(30000).describe('Command timeout in ms'),
+});
+
+export type BashEventHandler = z.infer<typeof BashEventHandlerSchema>;
+
+/**
+ * Agent event handler
+ * Signals that an LLM agent should process the event.
+ * The MCP client implementor is responsible for invoking the LLM.
+ */
+export const AgentEventHandlerSchema = z.object({
+  type: z.literal('agent'),
+  /** System prompt for the agent */
+  systemPrompt: z.string().optional().describe('System prompt for the LLM agent'),
+  /** Model to use (implementation-specific) */
+  model: z.string().optional().describe('Model identifier (e.g., "gpt-4", "claude-3")'),
+  /** Additional context or instructions */
+  instructions: z.string().optional().describe('Additional instructions for handling this event'),
+  /** Tools the agent should have access to */
+  tools: z.array(z.string()).optional().describe('Tool names the agent can use'),
+  /** Max tokens for response */
+  maxTokens: z.number().optional().describe('Maximum tokens for agent response'),
+});
+
+export type AgentEventHandler = z.infer<typeof AgentEventHandlerSchema>;
+
+/**
+ * Webhook event handler
+ * Posts event data to an HTTP endpoint
+ */
+export const WebhookEventHandlerSchema = z.object({
+  type: z.literal('webhook'),
+  url: z.string().url().describe('Webhook URL to POST events to'),
+  headers: z.record(z.string()).optional().describe('Additional HTTP headers'),
+  /** Timeout in milliseconds */
+  timeout: z.number().default(10000).describe('Request timeout in ms'),
+});
+
+export type WebhookEventHandler = z.infer<typeof WebhookEventHandlerSchema>;
+
+/**
+ * Event handler - defines how to process received events
+ */
+export const EventHandlerSchema = z.discriminatedUnion('type', [
+  BashEventHandlerSchema,
+  AgentEventHandlerSchema,
+  WebhookEventHandlerSchema,
+]);
+
+export type EventHandler = z.infer<typeof EventHandlerSchema>;
+
+/**
  * Delivery channels for event notifications
  * - realtime: Immediate delivery via MCP notification
  * - cron: Recurring scheduled delivery (aggregated batch)
@@ -78,6 +145,7 @@ export const SubscriptionSchema = z.object({
   clientId: z.string(),
   filter: EventFilterSchema,
   delivery: DeliveryPreferencesSchema,
+  handler: EventHandlerSchema.optional().describe('How to process received events'),
   status: SubscriptionStatusSchema.default('active'),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
@@ -92,6 +160,7 @@ export type Subscription = z.infer<typeof SubscriptionSchema>;
 export const CreateSubscriptionRequestSchema = z.object({
   filter: EventFilterSchema,
   delivery: DeliveryPreferencesSchema,
+  handler: EventHandlerSchema.optional().describe('How to process received events'),
   expiresAt: z.string().datetime().optional(),
 });
 
@@ -103,6 +172,7 @@ export type CreateSubscriptionRequest = z.infer<typeof CreateSubscriptionRequest
 export const UpdateSubscriptionRequestSchema = z.object({
   filter: EventFilterSchema.optional(),
   delivery: DeliveryPreferencesSchema.optional(),
+  handler: EventHandlerSchema.optional().nullable().describe('Update or remove event handler'),
   status: SubscriptionStatusSchema.optional(),
   expiresAt: z.string().datetime().optional().nullable(),
 });

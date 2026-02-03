@@ -13,6 +13,15 @@ export {
   type EventMetadata,
   type MCPEvent,
   type EventFilter,
+  // Event handler types
+  BashEventHandlerSchema,
+  AgentEventHandlerSchema,
+  WebhookEventHandlerSchema,
+  EventHandlerSchema,
+  type BashEventHandler,
+  type AgentEventHandler,
+  type WebhookEventHandler,
+  type EventHandler,
   // Subscription types
   DeliveryChannelSchema,
   CronScheduleSchema,
@@ -39,6 +48,13 @@ export {
   type EventsFeatures,
   type EventsCapability,
   type EventsServerOptions,
+  // Config types (mcpe.json)
+  SubscriptionConfigSchema,
+  MCPEConfigSchema,
+  parseMCPEConfig,
+  validateMCPEConfig,
+  type SubscriptionConfig,
+  type MCPEConfig,
 } from './types/index.js';
 
 // Server
@@ -47,14 +63,20 @@ export {
   type EventsServerConfig,
 } from './server/index.js';
 export { SubscriptionManager } from './server/index.js';
+export {
+  HandlerExecutor,
+  type HandlerResult,
+  type AgentHandlerCallback,
+  type HandlerExecutorConfig,
+} from './server/index.js';
 
 // Client
 export {
   EventsClient,
   type EventsClientConfig,
-  type EventHandler,
-  type BatchEventHandler,
-  type SubscriptionExpiredHandler,
+  type EventCallback,
+  type BatchEventCallback,
+  type SubscriptionExpiredCallback,
   type SubscribeResult,
   type ListSubscriptionsResult,
 } from './client/index.js';

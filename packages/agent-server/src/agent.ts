@@ -2,7 +2,7 @@ import { generateText, tool } from 'ai';
 import { createOpenAI } from '@ai-sdk/openai';
 import { z } from 'zod';
 import { getMCPEInstance, type SubscriptionInfo } from './mcpe-integration.js';
-import type { EventFilter, EventSource } from '@anthropic/mcpe';
+import type { EventFilter, EventSource } from '@mcpe/core';
 
 // Create OpenAI-compatible provider with custom base URL (Wix API)
 const openai = createOpenAI({

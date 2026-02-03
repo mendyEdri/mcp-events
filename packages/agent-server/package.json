@@ -20,7 +20,7 @@
     "dev": "node --loader ts-node/esm src/index.ts"
   },
   "dependencies": {
-    "@anthropic/mcpe": "workspace:*",
+    "@mcpe/core": "workspace:*",
     "@modelcontextprotocol/sdk": "^1.0.0",
     "@ai-sdk/openai": "^1.0.0",
     "ai": "^4.0.0",

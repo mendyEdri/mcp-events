@@ -1,4 +1,4 @@
-import { EventsServer, createEvent } from '@anthropic/mcpe';
+import { EventsServer, createEvent } from '@mcpe/core';
 import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';
 import { createServer } from 'http';
 

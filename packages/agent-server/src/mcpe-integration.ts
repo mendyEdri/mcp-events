@@ -6,7 +6,7 @@ import {
   type CronSchedule,
   type ScheduledDelivery,
   type DeliveryChannel,
-} from '@anthropic/mcpe';
+} from '@mcpe/core';
 
 export interface MCPEConnectionOptions {
   url: string;

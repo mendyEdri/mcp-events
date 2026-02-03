@@ -1,4 +1,4 @@
-import { EventsClient } from '@anthropic/mcpe';
+import { EventsClient } from '@mcpe/core';
 import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js';
 
 /**
