@@ -1,6 +1,6 @@
 #!/usr/bin/env npx tsx
 /**
- * Webhook Forwarder - Real-World ESMCP Subscriber
+ * Webhook Forwarder - Real-World ASP Subscriber
  *
  * Forwards events to external HTTP endpoints.
  *
@@ -10,10 +10,10 @@
  * WEBHOOK_URLS=[{"url":"https://hooks.zapier.com/...","events":["github.*"]},{"url":"https://discord.com/api/webhooks/...","events":["*"]}]
  */
 
-import { ESMCPClient } from '@esmcp/client';
+import { ASPClient, WebSocketTransport } from '@esmcp/client';
 import type { ESMCPEvent } from '@esmcp/core';
 
-const ESMCP_SERVER = process.env.ESMCP_SERVER || 'ws://localhost:8080';
+const ASP_SERVER = process.env.ASP_SERVER || process.env.ESMCP_SERVER || 'ws://localhost:8080';
 const SUBSCRIBER_NAME = process.env.SUBSCRIBER_NAME || 'webhook-forwarder';
 
 interface WebhookConfig {
@@ -114,10 +114,14 @@ async function main() {
   });
   console.log();
 
-  const client = new ESMCPClient({
-    serverUrl: ESMCP_SERVER,
-    clientInfo: { name: SUBSCRIBER_NAME, version: '1.0.0' },
+  const transport = new WebSocketTransport({
+    url: ASP_SERVER,
     reconnect: true,
+  });
+
+  const client = new ASPClient({
+    transport,
+    clientInfo: { name: SUBSCRIBER_NAME, version: '1.0.0' },
   });
 
   client.onEvent('*', async (event: ESMCPEvent) => {
@@ -134,7 +138,7 @@ async function main() {
   });
 
   await client.connect();
-  console.log('✅ Connected to ESMCP server');
+  console.log('✅ Connected to ASP server');
 
   const subscription = await client.subscribe({
     filter: {},

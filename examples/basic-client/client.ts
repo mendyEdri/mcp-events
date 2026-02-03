@@ -1,12 +1,20 @@
-import { ESMCPClient } from '@esmcp/client';
+import { ASPClient, WebSocketTransport } from '@esmcp/client';
 
 const SERVER_URL = 'ws://localhost:8080';
 
 async function main() {
-  console.log('Creating ESMCP client...');
+  console.log('Creating ASP client with WebSocket transport...');
 
-  const client = new ESMCPClient({
-    serverUrl: SERVER_URL,
+  // ASP uses transport injection - create transport separately
+  const transport = new WebSocketTransport({
+    url: SERVER_URL,
+    reconnect: true,
+    reconnectInterval: 1000,
+    maxReconnectAttempts: 5,
+  });
+
+  const client = new ASPClient({
+    transport,
     clientInfo: {
       name: 'Example Client',
       version: '1.0.0',
@@ -15,9 +23,6 @@ async function main() {
       websocket: true,
       apns: false,
     },
-    reconnect: true,
-    reconnectInterval: 1000,
-    maxReconnectAttempts: 5,
   });
 
   // Set up event handlers before connecting
@@ -38,7 +43,13 @@ async function main() {
   await client.connect();
   console.log('Connected!');
   console.log('Server info:', client.serverInfo);
-  console.log('Server capabilities:', client.serverCapabilities);
+
+  // Discover capabilities (ASP feature)
+  const capabilities = await client.getCapabilities();
+  console.log('Server capabilities:', {
+    maxSubscriptions: capabilities.subscriptions.maxActive,
+    supportedSources: capabilities.filters.supportedSources,
+  });
 
   // Create subscriptions
   console.log('\nCreating subscriptions...');
