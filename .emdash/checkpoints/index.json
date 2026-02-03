@@ -1,0 +1,42 @@
+{
+  "version": "1.0",
+  "checkpoints": [
+    {
+      "id": "cp_1ea73373-a7df-4d92-9320-c4ea6fd3387b_001",
+      "session_id": "1ea73373-a7df-4d92-9320-c4ea6fd3387b",
+      "iteration": 1,
+      "timestamp": "2026-02-03T16:46:25.885144",
+      "commit_sha": "26863f3e19122d102bad59284ee86ee6ea69be44",
+      "summary": "Response to: /projectmd",
+      "tools_used": [
+        "glob",
+        "list_files",
+        "read_file"
+      ],
+      "files_modified": [
+        ".claude/settings.local.json",
+        ".emdash/index/kuzu_db",
+        ".emdash/index/kuzu_db.wal",
+        ".emdash/sessions/_autosave.json",
+        ".emdash/sessions/index.json",
+        ".emdash/tasks/default.json",
+        ".emdash/tasks/default.lock",
+        ".npmrc",
+        "packages/agent-server/Dockerfile",
+        "packages/agent-server/fly.toml",
+        "packages/agent-server/package.json",
+        "packages/agent-server/src/agent.ts",
+        "packages/agent-server/src/index.ts",
+        "packages/agent-server/src/mcpe-integration.ts",
+        "packages/agent-server/src/server.ts",
+        "packages/agent-server/tsconfig.json",
+        "pnpm-lock.yaml"
+      ],
+      "token_usage": {
+        "input": 30935,
+        "output": 750,
+        "thinking": 185
+      }
+    }
+  ]
+}
