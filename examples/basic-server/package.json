@@ -1,8 +1,8 @@
 {
-  "name": "@mcpe/example-basic-client",
+  "name": "@mcpe/example-basic-server",
   "version": "1.0.0",
   "private": true,
-  "description": "Basic MCPE client example",
+  "description": "Basic MCPE server example",
   "type": "module",
   "main": "./dist/index.js",
   "scripts": {

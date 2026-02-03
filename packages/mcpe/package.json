@@ -1,7 +1,7 @@
 {
-  "name": "@esmcp/agent-server",
+  "name": "@anthropic/mcpe",
   "version": "1.0.0",
-  "description": "MCPE Agent Server with AI SDK and Hono",
+  "description": "MCP Events - Event subscription extension for MCP",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -9,6 +9,14 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./server": {
+      "types": "./dist/server/index.d.ts",
+      "import": "./dist/server/index.js"
+    },
+    "./client": {
+      "types": "./dist/client/index.d.ts",
+      "import": "./dist/client/index.js"
     }
   },
   "files": ["dist"],
@@ -16,21 +24,20 @@
     "build": "tsc",
     "clean": "rm -rf dist",
     "typecheck": "tsc --noEmit",
-    "start": "node dist/index.js",
-    "dev": "node --loader ts-node/esm src/index.ts"
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
-    "@anthropic/mcpe": "workspace:*",
     "@modelcontextprotocol/sdk": "^1.0.0",
-    "@ai-sdk/openai": "^1.0.0",
-    "ai": "^4.0.0",
-    "hono": "^4.0.0",
-    "@hono/node-server": "^1.13.0",
     "zod": "^3.22.0",
     "uuid": "^9.0.0"
   },
   "devDependencies": {
     "@types/uuid": "^9.0.0",
-    "typescript": "^5.3.0"
+    "typescript": "^5.3.0",
+    "vitest": "^1.0.0"
+  },
+  "peerDependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0"
   }
 }

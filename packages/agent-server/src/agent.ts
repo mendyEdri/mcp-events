@@ -2,7 +2,7 @@ import { generateText, tool } from 'ai';
 import { createOpenAI } from '@ai-sdk/openai';
 import { z } from 'zod';
 import { getMCPEInstance, type SubscriptionInfo } from './mcpe-integration.js';
-import type { EventFilter, EventSource } from '@esmcp/core';
+import type { EventFilter, EventSource } from '@anthropic/mcpe';
 
 // Create OpenAI-compatible provider with custom base URL (Wix API)
 const openai = createOpenAI({
@@ -13,11 +13,15 @@ const openai = createOpenAI({
 const SYSTEM_PROMPT = `You are an intelligent event subscription agent for the MCPE (MCP Events) protocol.
 Your role is to help users subscribe to events from various sources like GitHub, Gmail, Slack, etc.
 
+You can answer questions about MCPE, explain how subscriptions work, and help users understand the protocol even without being connected to an EventHub.
+
 When a user requests event subscriptions, you should:
 1. Analyze their request to understand what events they want to receive
-2. If not already connected, connect to the MCPE EventHub
+2. If not already connected, connect to the MCPE EventHub (requires MCPE_URL to be configured)
 3. Create appropriate subscriptions based on their requirements
 4. Provide clear feedback about what subscriptions were created
+
+If subscription tools return an error about missing MCPE URL, explain to the user that they need to configure the MCPE_URL environment variable or provide an EventHub URL.
 
 Available event sources: github, gmail, slack, custom
 
@@ -64,14 +68,6 @@ export async function runAgent(request: AgentRequest): Promise<AgentResponse> {
   const mcpe = getMCPEInstance();
   const mcpeUrl = request.mcpeUrl ?? process.env.MCPE_URL;
 
-  if (!mcpeUrl) {
-    return {
-      success: false,
-      message: 'No MCPE EventHub URL provided',
-      error: 'MCPE_URL environment variable not set and no mcpeUrl provided in request',
-    };
-  }
-
   try {
     const result = await generateText({
       model: openai('gpt-4o-mini'),
@@ -92,18 +88,6 @@ export async function runAgent(request: AgentRequest): Promise<AgentResponse> {
           },
         }),
 
-        getServerCapabilities: tool({
-          description: 'Get the capabilities of the connected MCPE EventHub server',
-          parameters: z.object({}),
-          execute: async () => {
-            if (!mcpe.isConnected()) {
-              return { error: 'Not connected to EventHub. Use connectToEventHub first.' };
-            }
-            const capabilities = mcpe.getServerCapabilities();
-            return { capabilities };
-          },
-        }),
-
         subscribe: tool({
           description: 'Subscribe to events with real-time delivery (immediate notifications)',
           parameters: z.object({
@@ -117,6 +101,9 @@ export async function runAgent(request: AgentRequest): Promise<AgentResponse> {
               .describe('Priority levels to filter by'),
           }),
           execute: async ({ sources, eventTypes, tags, priority }) => {
+            if (!mcpeUrl) {
+              return { error: 'No MCPE EventHub URL configured. Please set MCPE_URL environment variable or provide mcpeUrl in the request.' };
+            }
             if (!mcpe.isConnected()) {
               await mcpe.connect({ url: mcpeUrl });
             }
@@ -160,6 +147,9 @@ export async function runAgent(request: AgentRequest): Promise<AgentResponse> {
               .describe('Maximum events per delivery batch'),
           }),
           execute: async ({ sources, eventTypes, tags, priority, cronExpression, timezone, maxEventsPerDelivery }) => {
+            if (!mcpeUrl) {
+              return { error: 'No MCPE EventHub URL configured. Please set MCPE_URL environment variable or provide mcpeUrl in the request.' };
+            }
             if (!mcpe.isConnected()) {
               await mcpe.connect({ url: mcpeUrl });
             }
@@ -213,6 +203,9 @@ export async function runAgent(request: AgentRequest): Promise<AgentResponse> {
               .describe('Automatically expire subscription after delivery'),
           }),
           execute: async ({ sources, eventTypes, tags, priority, deliverAt, timezone, description, autoExpire }) => {
+            if (!mcpeUrl) {
+              return { error: 'No MCPE EventHub URL configured. Please set MCPE_URL environment variable or provide mcpeUrl in the request.' };
+            }
             if (!mcpe.isConnected()) {
               await mcpe.connect({ url: mcpeUrl });
             }

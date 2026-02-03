@@ -1,14 +1,12 @@
-import { ESMCPClient, type ESMCPClientOptions } from '@esmcp/client';
-import type {
-  EventFilter,
-  Subscription,
-  CreateSubscriptionRequest,
-  ESMCPEvent,
-  ServerCapabilities,
-  CronSchedule,
-  ScheduledDelivery,
-  DeliveryChannel,
-} from '@esmcp/core';
+import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js';
+import {
+  EventsClient,
+  type EventFilter,
+  type MCPEvent,
+  type CronSchedule,
+  type ScheduledDelivery,
+  type DeliveryChannel,
+} from '@anthropic/mcpe';
 
 export interface MCPEConnectionOptions {
   url: string;
@@ -27,33 +25,27 @@ export interface SubscriptionInfo {
 }
 
 export class MCPEIntegration {
-  private client: ESMCPClient | null = null;
+  private client: EventsClient | null = null;
   private subscriptions: Map<string, SubscriptionInfo> = new Map();
-  private eventHandlers: Map<string, (event: ESMCPEvent) => void> = new Map();
+  private eventHandlers: Map<string, (event: MCPEvent) => void> = new Map();
   private connectionUrl: string | null = null;
+  private unsubscribeHandlers: (() => void)[] = [];
 
   async connect(options: MCPEConnectionOptions): Promise<void> {
     if (this.client) {
       await this.disconnect();
     }
 
-    const clientOptions: ESMCPClientOptions = {
-      serverUrl: options.url,
-      clientInfo: {
-        name: options.clientName ?? 'mcpe-agent-server',
-        version: options.clientVersion ?? '1.0.0',
-      },
-      capabilities: {
-        websocket: true,
-      },
-      reconnect: true,
-      reconnectInterval: 5000,
-      maxReconnectAttempts: 10,
-    };
+    this.client = new EventsClient({
+      name: options.clientName ?? 'mcpe-agent-server',
+      version: options.clientVersion ?? '1.0.0',
+    });
 
-    this.client = new ESMCPClient(clientOptions);
     this.connectionUrl = options.url;
-    await this.client.connect();
+
+    // Create SSE transport for the MCP connection
+    const transport = new SSEClientTransport(new URL(options.url));
+    await this.client.connect(transport);
   }
 
   async disconnect(): Promise<void> {
@@ -66,105 +58,102 @@ export class MCPEIntegration {
           // Ignore errors during cleanup
         }
       }
-      await this.client.disconnect();
+
+      // Clean up event handlers
+      for (const unsubscribe of this.unsubscribeHandlers) {
+        unsubscribe();
+      }
+
+      await this.client.close();
       this.client = null;
       this.subscriptions.clear();
       this.eventHandlers.clear();
+      this.unsubscribeHandlers = [];
       this.connectionUrl = null;
     }
   }
 
   isConnected(): boolean {
-    return this.client !== null && this.client.state === 'initialized';
+    return this.client !== null && this.client.supportsEvents();
   }
 
   getConnectionUrl(): string | null {
     return this.connectionUrl;
   }
 
-  getServerCapabilities(): ServerCapabilities | null {
-    return this.client?.serverCapabilities ?? null;
-  }
-
   /**
-   * Subscribe with real-time WebSocket delivery
+   * Subscribe with real-time delivery
    */
   async subscribe(
     filter: EventFilter,
-    onEvent?: (event: ESMCPEvent) => void
+    onEvent?: (event: MCPEvent) => void
   ): Promise<SubscriptionInfo> {
     if (!this.client) {
-      throw new Error('Not connected to MCPE EventHub');
+      throw new Error('Not connected to MCPE server');
     }
 
-    const request: CreateSubscriptionRequest = {
+    const result = await this.client.subscribe({
       filter,
       delivery: {
-        channels: ['websocket'],
-        priority: 'realtime',
+        channels: ['realtime'],
       },
-    };
-
-    const subscription: Subscription = await this.client.subscribe(request);
+    });
 
     const info: SubscriptionInfo = {
-      id: subscription.id,
+      id: result.subscriptionId,
       filter,
       createdAt: new Date(),
       eventCount: 0,
-      deliveryChannel: 'websocket',
+      deliveryChannel: 'realtime',
     };
 
-    this.subscriptions.set(subscription.id, info);
+    this.subscriptions.set(result.subscriptionId, info);
 
     // Set up event handler
     if (onEvent) {
-      this.eventHandlers.set(subscription.id, onEvent);
-    }
+      this.eventHandlers.set(result.subscriptionId, onEvent);
 
-    // Register event listener for this subscription
-    this.client.onEvent('*', (event, subscriptionId) => {
-      if (subscriptionId === subscription.id) {
-        const subInfo = this.subscriptions.get(subscription.id);
-        if (subInfo) {
-          subInfo.eventCount++;
+      // Register event listener with the client
+      const unsubscribe = this.client.onEvent('*', (event, subscriptionId) => {
+        if (subscriptionId === result.subscriptionId) {
+          const subInfo = this.subscriptions.get(result.subscriptionId);
+          if (subInfo) {
+            subInfo.eventCount++;
+          }
+          const handler = this.eventHandlers.get(result.subscriptionId);
+          if (handler) {
+            handler(event);
+          }
         }
-        const handler = this.eventHandlers.get(subscription.id);
-        if (handler) {
-          handler(event);
-        }
-      }
-    });
+      });
+      this.unsubscribeHandlers.push(unsubscribe);
+    }
 
     return info;
   }
 
   /**
    * Subscribe with cron-based recurring delivery
-   * Events are collected and delivered on a schedule (e.g., daily digest, hourly summary)
    */
   async subscribeWithCron(
     filter: EventFilter,
     cronSchedule: CronSchedule,
-    onEvent?: (event: ESMCPEvent) => void
+    onEvent?: (event: MCPEvent) => void
   ): Promise<SubscriptionInfo> {
     if (!this.client) {
-      throw new Error('Not connected to MCPE EventHub');
+      throw new Error('Not connected to MCPE server');
     }
 
-    const request: CreateSubscriptionRequest = {
+    const result = await this.client.subscribe({
       filter,
       delivery: {
         channels: ['cron'],
-        priority: 'batch',
         cronSchedule,
       },
-    };
-
-    const subscription: Subscription = await this.client.subscribe(request);
+    });
 
     const info: SubscriptionInfo = {
-      id: subscription.id,
+      id: result.subscriptionId,
       filter,
       createdAt: new Date(),
       eventCount: 0,
@@ -172,58 +161,55 @@ export class MCPEIntegration {
       cronSchedule,
     };
 
-    this.subscriptions.set(subscription.id, info);
+    this.subscriptions.set(result.subscriptionId, info);
 
-    // Set up event handler for when cron triggers delivery
+    // Set up batch handler for cron deliveries
     if (onEvent) {
-      this.eventHandlers.set(subscription.id, onEvent);
-    }
+      this.eventHandlers.set(result.subscriptionId, onEvent);
 
-    // Register event listener
-    this.client.onEvent('*', (event, subscriptionId) => {
-      if (subscriptionId === subscription.id) {
-        const subInfo = this.subscriptions.get(subscription.id);
-        if (subInfo) {
-          subInfo.eventCount++;
+      const unsubscribe = this.client.onBatch((events, subscriptionId) => {
+        if (subscriptionId === result.subscriptionId) {
+          const subInfo = this.subscriptions.get(result.subscriptionId);
+          if (subInfo) {
+            subInfo.eventCount += events.length;
+          }
+          const handler = this.eventHandlers.get(result.subscriptionId);
+          if (handler) {
+            for (const event of events) {
+              handler(event);
+            }
+          }
         }
-        const handler = this.eventHandlers.get(subscription.id);
-        if (handler) {
-          handler(event);
-        }
-      }
-    });
+      });
+      this.unsubscribeHandlers.push(unsubscribe);
+    }
 
     return info;
   }
 
   /**
    * Subscribe with one-time scheduled delivery
-   * Events are collected and delivered at a specific time (e.g., "remind me in 4 hours")
    */
   async subscribeScheduled(
     filter: EventFilter,
     scheduledDelivery: ScheduledDelivery,
-    onEvent?: (event: ESMCPEvent) => void
+    onEvent?: (event: MCPEvent) => void
   ): Promise<SubscriptionInfo> {
     if (!this.client) {
-      throw new Error('Not connected to MCPE EventHub');
+      throw new Error('Not connected to MCPE server');
     }
 
-    const request: CreateSubscriptionRequest = {
+    const result = await this.client.subscribe({
       filter,
       delivery: {
         channels: ['scheduled'],
-        priority: 'normal',
         scheduledDelivery,
       },
-      // Auto-expire after delivery if configured
       expiresAt: scheduledDelivery.autoExpire ? scheduledDelivery.deliverAt : undefined,
-    };
-
-    const subscription: Subscription = await this.client.subscribe(request);
+    });
 
     const info: SubscriptionInfo = {
-      id: subscription.id,
+      id: result.subscriptionId,
       filter,
       createdAt: new Date(),
       eventCount: 0,
@@ -231,33 +217,35 @@ export class MCPEIntegration {
       scheduledDelivery,
     };
 
-    this.subscriptions.set(subscription.id, info);
+    this.subscriptions.set(result.subscriptionId, info);
 
-    // Set up event handler for when scheduled delivery triggers
+    // Set up batch handler for scheduled deliveries
     if (onEvent) {
-      this.eventHandlers.set(subscription.id, onEvent);
-    }
+      this.eventHandlers.set(result.subscriptionId, onEvent);
 
-    // Register event listener
-    this.client.onEvent('*', (event, subscriptionId) => {
-      if (subscriptionId === subscription.id) {
-        const subInfo = this.subscriptions.get(subscription.id);
-        if (subInfo) {
-          subInfo.eventCount++;
+      const unsubscribe = this.client.onBatch((events, subscriptionId) => {
+        if (subscriptionId === result.subscriptionId) {
+          const subInfo = this.subscriptions.get(result.subscriptionId);
+          if (subInfo) {
+            subInfo.eventCount += events.length;
+          }
+          const handler = this.eventHandlers.get(result.subscriptionId);
+          if (handler) {
+            for (const event of events) {
+              handler(event);
+            }
+          }
         }
-        const handler = this.eventHandlers.get(subscription.id);
-        if (handler) {
-          handler(event);
-        }
-      }
-    });
+      });
+      this.unsubscribeHandlers.push(unsubscribe);
+    }
 
     return info;
   }
 
   async unsubscribe(subscriptionId: string): Promise<boolean> {
     if (!this.client) {
-      throw new Error('Not connected to MCPE EventHub');
+      throw new Error('Not connected to MCPE server');
     }
 
     const success = await this.client.unsubscribe(subscriptionId);
