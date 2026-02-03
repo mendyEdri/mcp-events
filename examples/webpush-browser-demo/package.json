@@ -1,0 +1,29 @@
+{
+  "name": "@esmcp/webpush-browser-demo",
+  "version": "1.0.0",
+  "description": "Web Browser Push Notification Demo for ESMCP",
+  "type": "module",
+  "scripts": {
+    "generate-keys": "npx tsx generate-vapid-keys.ts",
+    "server": "npx tsx server.ts",
+    "publish": "npx tsx publish-event.ts"
+  },
+  "dependencies": {
+    "@esmcp/core": "workspace:*",
+    "@esmcp/client": "workspace:*",
+    "@esmcp/server": "workspace:*",
+    "@esmcp/webpush": "workspace:*",
+    "@esmcp/sse": "workspace:*",
+    "express": "^4.18.0",
+    "ws": "^8.14.0",
+    "web-push": "^3.6.0",
+    "uuid": "^9.0.0"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.0",
+    "@types/ws": "^8.5.0",
+    "@types/web-push": "^3.6.0",
+    "@types/uuid": "^9.0.0",
+    "typescript": "^5.3.0"
+  }
+}

@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ESMCP Web Push Demo</title>
+  <link rel="manifest" href="/manifest.json">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      overflow: hidden;
+    }
+
+    header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 40px;
+      text-align: center;
+    }
+
+    h1 {
+      font-size: 2.5em;
+      margin-bottom: 10px;
+    }
+
+    .subtitle {
+      opacity: 0.9;
+      font-size: 1.1em;
+    }
+
+    .content {
+      padding: 40px;
+    }
+
+    .section {
+      margin-bottom: 30px;
+      padding: 20px;
+      background: #f8f9fa;
+      border-radius: 12px;
+    }
+
+    .section h2 {
+      color: #667eea;
+      margin-bottom: 15px;
+      font-size: 1.3em;
+    }
+
+    .status {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 20px;
+      border-radius: 30px;
+      font-weight: 600;
+      margin-bottom: 15px;
+    }
+
+    .status.connected {
+      background: #d4edda;
+      color: #155724;
+    }
+
+    .status.disconnected {
+      background: #f8d7da;
+      color: #721c24;
+    }
+
+    .status.connecting {
+      background: #fff3cd;
+      color: #856404;
+    }
+
+    .status-indicator {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: currentColor;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    button {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      padding: 15px 30px;
+      font-size: 1em;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    button:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+    }
+
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    button.secondary {
+      background: #6c757d;
+    }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      margin-top: 15px;
+    }
+
+    .info-card {
+      background: white;
+      padding: 15px;
+      border-radius: 8px;
+      border: 1px solid #e9ecef;
+    }
+
+    .info-card h3 {
+      font-size: 0.9em;
+      color: #6c757d;
+      margin-bottom: 8px;
+    }
+
+    .info-card p {
+      font-weight: 600;
+      color: #333;
+      word-break: break-all;
+    }
+
+    .events-log {
+      background: #1a1a2e;
+      color: #eee;
+      padding: 20px;
+      border-radius: 12px;
+      max-height: 400px;
+      overflow-y: auto;
+      font-family: 'Monaco', 'Menlo', monospace;
+      font-size: 0.9em;
+    }
+
+    .events-log:empty::before {
+      content: 'No events yet. Click "Send Test Event" to see notifications!';
+      color: #6c757d;
+      font-style: italic;
+    }
+
+    .event-item {
+      margin-bottom: 10px;
+      padding: 10px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 6px;
+      border-left: 4px solid #667eea;
+    }
+
+    .event-item .timestamp {
+      color: #667eea;
+      font-size: 0.85em;
+    }
+
+    .event-item .type {
+      font-weight: bold;
+      color: #fff;
+    }
+
+    .event-item .data {
+      color: #a0a0a0;
+      font-size: 0.9em;
+      margin-top: 5px;
+    }
+
+    .controls {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 15px;
+    }
+
+    .push-icon {
+      font-size: 3em;
+      text-align: center;
+      margin: 20px 0;
+    }
+
+    .instructions {
+      background: #e7f3ff;
+      border-left: 4px solid #667eea;
+      padding: 15px;
+      border-radius: 0 8px 8px 0;
+      margin-bottom: 20px;
+    }
+
+    .instructions h3 {
+      color: #667eea;
+      margin-bottom: 10px;
+    }
+
+    .instructions ol {
+      margin-left: 20px;
+    }
+
+    .instructions li {
+      margin-bottom: 8px;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    @media (max-width: 600px) {
+      h1 {
+        font-size: 1.8em;
+      }
+      
+      .content {
+        padding: 20px;
+      }
+      
+      .controls {
+        flex-direction: column;
+      }
+      
+      button {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>🔔 ESMCP Web Push Demo</h1>
+      <p class="subtitle">MCP Client with Browser Push Notifications</p>
+    </header>
+
+    <div class="content">
+      <!-- Instructions -->
+      <div class="instructions" id="instructions">
+        <h3>📖 How to Use This Demo</h3>
+        <ol>
+          <li>Click <strong>"Connect MCP Client"</strong> to establish WebSocket connection</li>
+          <li>Click <strong>"Enable Push Notifications"</strong> to subscribe to browser push</li>
+          <li>Click <strong>"Send Test Event"</strong> or use the CLI to publish events</li>
+          <li>Watch events arrive via WebSocket AND as system notifications!</li>
+        </ol>
+      </div>
+
+      <!-- MCP Connection Status -->
+      <div class="section">
+        <h2>🔗 MCP Client Connection</h2>
+        <div class="status disconnected" id="connectionStatus">
+          <span class="status-indicator"></span>
+          <span>Disconnected</span>
+        </div>
+        <div class="info-grid" id="connectionInfo" style="display: none;">
+          <div class="info-card">
+            <h3>Server Info</h3>
+            <p id="serverName">-</p>
+          </div>
+          <div class="info-card">
+            <h3>Protocol Version</h3>
+            <p id="protocolVersion">-</p>
+          </div>
+          <div class="info-card">
+            <h3>Client ID</h3>
+            <p id="clientId">-</p>
+          </div>
+          <div class="info-card">
+            <h3>Subscription ID</h3>
+            <p id="subscriptionId">-</p>
+          </div>
+        </div>
+        <div class="controls">
+          <button id="connectBtn" onclick="connectMCP()">Connect MCP Client</button>
+          <button id="disconnectBtn" class="secondary hidden" onclick="disconnectMCP()">Disconnect</button>
+        </div>
+      </div>
+
+      <!-- Push Notifications -->
+      <div class="section">
+        <h2>📱 Browser Push Notifications</h2>
+        <div class="push-icon">🔕</div>
+        <div class="status disconnected" id="pushStatus">
+          <span class="status-indicator"></span>
+          <span>Push Not Enabled</span>
+        </div>
+        <div class="controls">
+          <button id="enablePushBtn" onclick="enablePushNotifications()" disabled>
+            Enable Push Notifications
+          </button>
+          <button id="disablePushBtn" class="secondary hidden" onclick="disablePushNotifications()">
+            Disable Push
+          </button>
+        </div>
+        <p style="margin-top: 15px; color: #6c757d; font-size: 0.9em;">
+          💡 Even when this tab is closed, you'll receive system notifications for MCP events!
+        </p>
+      </div>
+
+      <!-- Event Publisher -->
+      <div class="section">
+        <h2>📤 Publish Events</h2>
+        <div class="controls">
+          <button onclick="sendTestEvent()">Send Test Event</button>
+          <button class="secondary" onclick="sendGitHubEvent()">Simulate GitHub Push</button>
+          <button class="secondary" onclick="sendSlackEvent()">Simulate Slack Message</button>
+        </div>
+        <p style="margin-top: 15px; color: #6c757d; font-size: 0.9em;">
+          Or use the CLI: <code>npx tsx publish-event.ts</code>
+        </p>
+      </div>
+
+      <!-- Events Log -->
+      <div class="section">
+        <h2>📊 Events Log (WebSocket)</h2>
+        <div class="events-log" id="eventsLog"></div>
+        <div class="controls" style="margin-top: 15px;">
+          <button class="secondary" onclick="clearEvents()">Clear Log</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Generate unique client ID
+    const clientId = 'browser-' + Math.random().toString(36).substring(2, 15);
+    document.getElementById('clientId').textContent = clientId;
+
+    // MCP Client State
+    let ws = null;
+    let subscriptionId = null;
+    let reconnectAttempts = 0;
+    let pushSubscription = null;
+    const MAX_RECONNECT_ATTEMPTS = 5;
+
+    // Update connection status UI
+    function updateConnectionStatus(status, message) {
+      const statusEl = document.getElementById('connectionStatus');
+      statusEl.className = 'status ' + status;
+      statusEl.querySelector('span:last-child').textContent = message;
+
+      const connectBtn = document.getElementById('connectBtn');
+      const disconnectBtn = document.getElementById('disconnectBtn');
+      const connectionInfo = document.getElementById('connectionInfo');
+      const enablePushBtn = document.getElementById('enablePushBtn');
+
+      if (status === 'connected') {
+        connectBtn.classList.add('hidden');
+        disconnectBtn.classList.remove('hidden');
+        connectionInfo.style.display = 'grid';
+        enablePushBtn.disabled = false;
+        reconnectAttempts = 0;
+      } else {
+        connectBtn.classList.remove('hidden');
+        disconnectBtn.classList.add('hidden');
+        connectionInfo.style.display = 'none';
+        enablePushBtn.disabled = true;
+      }
+    }
+
+    // Update push status UI
+    function updatePushStatus(enabled) {
+      const statusEl = document.getElementById('pushStatus');
+      const pushIcon = document.querySelector('.push-icon');
+      const enableBtn = document.getElementById('enablePushBtn');
+      const disableBtn = document.getElementById('disablePushBtn');
+
+      if (enabled) {
+        statusEl.className = 'status connected';
+        statusEl.querySelector('span:last-child').textContent = 'Push Enabled ✓';
+        pushIcon.textContent = '🔔';
+        enableBtn.classList.add('hidden');
+        disableBtn.classList.remove('hidden');
+      } else {
+        statusEl.className = 'status disconnected';
+        statusEl.querySelector('span:last-child').textContent = 'Push Not Enabled';
+        pushIcon.textContent = '🔕';
+        enableBtn.classList.remove('hidden');
+        enableBtn.disabled = ws?.readyState !== WebSocket.OPEN;
+        disableBtn.classList.add('hidden');
+      }
+    }
+
+    // Connect to MCP server via WebSocket
+    async function connectMCP() {
+      updateConnectionStatus('connecting', 'Connecting...');
+
+      try {
+        ws = new WebSocket('ws://localhost:8080');
+
+        ws.onopen = () => {
+          console.log('WebSocket connected');
+          
+          // Send initialize request
+          sendRequest('initialize', {
+            protocolVersion: '2025-01-01',
+            clientInfo: {
+              name: 'browser-client',
+              version: '1.0.0'
+            },
+            capabilities: {
+              websocket: true
+            }
+          }, 1);
+        };
+
+        ws.onmessage = (event) => {
+          const message = JSON.parse(event.data);
+          handleMessage(message);
+        };
+
+        ws.onclose = () => {
+          console.log('WebSocket closed');
+          updateConnectionStatus('disconnected', 'Disconnected');
+          subscriptionId = null;
+          
+          // Attempt to reconnect
+          if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+            reconnectAttempts++;
+            updateConnectionStatus('connecting', `Reconnecting (${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})...`);
+            setTimeout(connectMCP, 2000);
+          }
+        };
+
+        ws.onerror = (error) => {
+          console.error('WebSocket error:', error);
+          updateConnectionStatus('disconnected', 'Connection Error');
+        };
+      } catch (error) {
+        console.error('Connection failed:', error);
+        updateConnectionStatus('disconnected', 'Connection Failed');
+      }
+    }
+
+    // Disconnect from MCP server
+    function disconnectMCP() {
+      if (ws) {
+        if (subscriptionId) {
+          sendRequest('subscriptions/remove', { subscriptionId }, Date.now());
+        }
+        ws.close();
+        ws = null;
+      }
+      updateConnectionStatus('disconnected', 'Disconnected');
+    }
+
+    // Send JSON-RPC request
+    function sendRequest(method, params, id) {
+      if (ws?.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({
+          jsonrpc: '2.0',
+          id,
+          method,
+          params
+        }));
+      }
+    }
+
+    // Handle incoming messages
+    function handleMessage(message) {
+      // Handle responses
+      if (message.id !== undefined && message.result !== undefined) {
+        handleResponse(message);
+      }
+      
+      // Handle notifications
+      if (message.method && !message.id) {
+        handleNotification(message);
+      }
+    }
+
+    // Handle JSON-RPC responses
+    function handleResponse(message) {
+      const result = message.result;
+
+      // Check if this is the initialize response
+      if (result.serverInfo) {
+        console.log('Initialized:', result);
+        document.getElementById('serverName').textContent = 
+          `${result.serverInfo.name} v${result.serverInfo.version}`;
+        document.getElementById('protocolVersion').textContent = result.protocolVersion;
+        
+        // Create subscription
+        sendRequest('subscriptions/create', {
+          filter: {
+            sources: ['github', 'slack', 'gmail', 'browser', 'custom']
+          },
+          delivery: {
+            channels: ['websocket'],
+            priority: 'realtime'
+          }
+        }, 2);
+      }
+
+      // Check if this is the subscription creation response
+      if (result.id && result.filter) {
+        console.log('Subscription created:', result);
+        subscriptionId = result.id;
+        document.getElementById('subscriptionId').textContent = subscriptionId;
+        updateConnectionStatus('connected', 'Connected');
+      }
+    }
+
+    // Handle notifications
+    function handleNotification(message) {
+      if (message.method === 'notifications/event') {
+        const { event, subscriptionId: subId } = message.params;
+        logEvent(event, subId);
+      }
+    }
+
+    // Log event to the UI
+    function logEvent(event, subId) {
+      const log = document.getElementById('eventsLog');
+      const item = document.createElement('div');
+      item.className = 'event-item';
+      
+      const time = new Date(event.metadata.timestamp).toLocaleTimeString();
+      item.innerHTML = `
+        <div class="timestamp">[${time}] ${subId.substring(0, 8)}...</div>
+        <div class="type">${event.type}</div>
+        <div class="data">${JSON.stringify(event.data, null, 2)}</div>
+      `;
+      
+      log.insertBefore(item, log.firstChild);
+    }
+
+    // Enable browser push notifications
+    async function enablePushNotifications() {
+      if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+        alert('Push notifications are not supported in this browser.');
+        return;
+      }
+
+      try {
+        // Register service worker
+        const registration = await navigator.serviceWorker.register('/service-worker.js');
+        console.log('Service Worker registered:', registration);
+
+        // Wait for the service worker to be ready
+        await navigator.serviceWorker.ready;
+
+        // Get VAPID public key from server
+        const response = await fetch('/api/vapid-public-key');
+        const { publicKey } = await response.json();
+
+        // Subscribe to push notifications
+        pushSubscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(publicKey)
+        });
+
+        console.log('Push subscription:', pushSubscription);
+
+        // Send subscription to server
+        await fetch('/api/register-push', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            subscription: pushSubscription,
+            clientId
+          })
+        });
+
+        updatePushStatus(true);
+      } catch (error) {
+        console.error('Failed to enable push:', error);
+        alert('Failed to enable push notifications: ' + error.message);
+      }
+    }
+
+    // Disable push notifications
+    async function disablePushNotifications() {
+      if (pushSubscription) {
+        await pushSubscription.unsubscribe();
+        pushSubscription = null;
+      }
+
+      await fetch('/api/unregister-push', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clientId })
+      });
+
+      updatePushStatus(false);
+    }
+
+    // Convert VAPID key to Uint8Array
+    function urlBase64ToUint8Array(base64String) {
+      const padding = '='.repeat((4 - base64String.length % 4) % 4);
+      const base64 = (base64String + padding)
+        .replace(/\-/g, '+')
+        .replace(/_/g, '/');
+
+      const rawData = window.atob(base64);
+      const outputArray = new Uint8Array(rawData.length);
+
+      for (let i = 0; i < rawData.length; ++i) {
+        outputArray[i] = rawData.charCodeAt(i);
+      }
+
+      return outputArray;
+    }
+
+    // Send test event via API
+    async function sendTestEvent() {
+      await fetch('/api/test', { method: 'POST' });
+    }
+
+    // Simulate GitHub push event
+    async function sendGitHubEvent() {
+      await fetch('/api/publish', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'github.push',
+          source: 'github',
+          priority: 'normal',
+          data: {
+            repo: 'my-awesome-project',
+            branch: 'main',
+            commits: 3,
+            pusher: 'developer'
+          }
+        })
+      });
+    }
+
+    // Simulate Slack message event
+    async function sendSlackEvent() {
+      await fetch('/api/publish', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'slack.message',
+          source: 'slack',
+          priority: 'high',
+          data: {
+            channel: '#general',
+            user: 'team-member',
+            message: 'Hey team, the deployment is complete! 🚀'
+          }
+        })
+      });
+    }
+
+    // Clear events log
+    function clearEvents() {
+      document.getElementById('eventsLog').innerHTML = '';
+    }
+
+    // Listen for messages from service worker
+    navigator.serviceWorker?.addEventListener('message', (event) => {
+      if (event.data.type === 'PUSH_RECEIVED') {
+        console.log('Push received while page was open:', event.data);
+      }
+    });
+  </script>
+</body>
+</html>
