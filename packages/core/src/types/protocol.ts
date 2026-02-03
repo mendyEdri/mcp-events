@@ -115,6 +115,15 @@ export const MCPECapabilitiesSchema = z.object({
     apnsEnabled: z.boolean().describe('Whether Apple Push Notifications are available'),
     webPushEnabled: z.boolean().describe('Whether Web Push notifications are available'),
   }).optional(),
+
+  // Time-based scheduling capabilities
+  scheduling: z.object({
+    cronEnabled: z.boolean().describe('Whether cron-based recurring delivery is available'),
+    scheduledEnabled: z.boolean().describe('Whether one-time scheduled delivery is available'),
+    supportedTimezones: z.array(z.string()).optional().describe('Supported IANA timezones'),
+    maxScheduledPerClient: z.number().optional().describe('Maximum scheduled deliveries per client'),
+    cronPresets: z.array(z.string()).optional().describe('Available cron presets (@hourly, @daily, etc.)'),
+  }).optional(),
 });
 
 // Legacy export
@@ -202,7 +211,7 @@ export const MCPEOperationDefinitions: MCPEOperation[] = [
           properties: {
             channels: {
               type: 'array',
-              items: { type: 'string', enum: ['websocket', 'sse', 'webpush', 'apns'] },
+              items: { type: 'string', enum: ['websocket', 'sse', 'webpush', 'apns', 'cron', 'scheduled'] },
               description: 'Delivery channels in order of preference',
             },
             priority: {
@@ -213,6 +222,57 @@ export const MCPEOperationDefinitions: MCPEOperation[] = [
             batchInterval: {
               type: 'number',
               description: 'Batch interval in milliseconds (for batch priority)',
+            },
+            cronSchedule: {
+              type: 'object',
+              description: 'Cron schedule for recurring delivery (required when using cron channel)',
+              properties: {
+                expression: {
+                  type: 'string',
+                  description: 'Cron expression (e.g., "0 * * * *" for hourly) or preset (@hourly, @daily, @weekly, @monthly)',
+                },
+                timezone: {
+                  type: 'string',
+                  description: 'IANA timezone (e.g., "America/New_York"). Defaults to UTC',
+                },
+                aggregateEvents: {
+                  type: 'boolean',
+                  description: 'Aggregate matching events and deliver as batch. Defaults to true',
+                },
+                maxEventsPerDelivery: {
+                  type: 'number',
+                  description: 'Maximum events per delivery batch. Defaults to 100',
+                },
+              },
+              required: ['expression'],
+            },
+            scheduledDelivery: {
+              type: 'object',
+              description: 'One-time scheduled delivery (required when using scheduled channel)',
+              properties: {
+                deliverAt: {
+                  type: 'string',
+                  format: 'date-time',
+                  description: 'ISO 8601 datetime for delivery',
+                },
+                timezone: {
+                  type: 'string',
+                  description: 'IANA timezone. Defaults to UTC',
+                },
+                description: {
+                  type: 'string',
+                  description: 'Human-readable description (e.g., "in 4 hours", "next Sunday")',
+                },
+                aggregateEvents: {
+                  type: 'boolean',
+                  description: 'Aggregate matching events until delivery time. Defaults to true',
+                },
+                autoExpire: {
+                  type: 'boolean',
+                  description: 'Automatically expire subscription after delivery. Defaults to true',
+                },
+              },
+              required: ['deliverAt'],
             },
           },
           required: ['channels'],
@@ -256,6 +316,83 @@ export const MCPEOperationDefinitions: MCPEOperation[] = [
           id: '550e8400-e29b-41d4-a716-446655440001',
           status: 'active',
           createdAt: '2025-01-15T10:31:00Z',
+        },
+      },
+      {
+        description: 'Daily digest of GitHub events at 9am',
+        input: {
+          filter: { sources: ['github'] },
+          delivery: {
+            channels: ['cron'],
+            cronSchedule: {
+              expression: '@daily',
+              timezone: 'America/New_York',
+              aggregateEvents: true,
+            },
+          },
+        },
+        output: {
+          id: '550e8400-e29b-41d4-a716-446655440002',
+          status: 'active',
+          createdAt: '2025-01-15T10:32:00Z',
+        },
+      },
+      {
+        description: 'Hourly email summary',
+        input: {
+          filter: { sources: ['gmail'] },
+          delivery: {
+            channels: ['cron'],
+            cronSchedule: {
+              expression: '0 * * * *',
+              aggregateEvents: true,
+              maxEventsPerDelivery: 50,
+            },
+          },
+        },
+        output: {
+          id: '550e8400-e29b-41d4-a716-446655440003',
+          status: 'active',
+          createdAt: '2025-01-15T10:33:00Z',
+        },
+      },
+      {
+        description: 'Remind me about Slack messages in 4 hours',
+        input: {
+          filter: { sources: ['slack'] },
+          delivery: {
+            channels: ['scheduled'],
+            scheduledDelivery: {
+              deliverAt: '2025-01-15T14:30:00Z',
+              description: 'in 4 hours',
+              aggregateEvents: true,
+              autoExpire: true,
+            },
+          },
+        },
+        output: {
+          id: '550e8400-e29b-41d4-a716-446655440004',
+          status: 'active',
+          createdAt: '2025-01-15T10:30:00Z',
+        },
+      },
+      {
+        description: 'Weekly GitHub report on Monday mornings',
+        input: {
+          filter: { sources: ['github'], eventTypes: ['github.*'] },
+          delivery: {
+            channels: ['cron'],
+            cronSchedule: {
+              expression: '0 9 * * 1',
+              timezone: 'Europe/London',
+              aggregateEvents: true,
+            },
+          },
+        },
+        output: {
+          id: '550e8400-e29b-41d4-a716-446655440005',
+          status: 'active',
+          createdAt: '2025-01-15T10:34:00Z',
         },
       },
     ],
@@ -453,13 +590,18 @@ export const defaultMCPECapabilities: MCPECapabilities = {
     supportsPriorityFiltering: true,
   },
   delivery: {
-    supportedChannels: ['websocket', 'sse', 'webpush', 'apns'],
+    supportedChannels: ['websocket', 'sse', 'webpush', 'apns', 'cron', 'scheduled'],
     supportedPriorities: ['realtime', 'normal', 'batch'],
     supportsMultiChannel: true,
   },
   push: {
     apnsEnabled: false,
     webPushEnabled: false,
+  },
+  scheduling: {
+    cronEnabled: true,
+    scheduledEnabled: true,
+    cronPresets: ['@hourly', '@daily', '@weekly', '@monthly'],
   },
 };
 
