@@ -281,6 +281,9 @@ importers:
       '@modelcontextprotocol/sdk':
         specifier: ^1.0.0
         version: 1.25.3(hono@4.11.4)(zod@3.25.76)
+      croner:
+        specifier: ^9.1.0
+        version: 9.1.0
       uuid:
         specifier: ^9.0.0
         version: 9.0.1
@@ -1504,6 +1507,11 @@ packages:
     dependencies:
       object-assign: 4.1.1
       vary: 1.1.2
+    dev: false
+
+  /croner@9.1.0:
+    resolution: {integrity: sha512-p9nwwR4qyT5W996vBZhdvBCnMhicY5ytZkR4D1Xj0wuTDEiMnjwR57Q3RXYY/s0EpX6Ay3vgIcfaR+ewGHsi+g==, tarball: https://npm.dev.wixpress.com/api/npm/npm-repos/croner/-/croner-9.1.0.tgz}
+    engines: {node: '>=18.0'}
     dev: false
 
   /cross-spawn@7.0.6:

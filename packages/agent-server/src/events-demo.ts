@@ -186,9 +186,36 @@ function setupDemoSubscriptions(): void {
     },
   });
 
+  // Demo subscription 6: Cron-based daily digest (runs every minute for demo)
+  // In production, use "0 9 * * *" for daily at 9am
+  const cronSub = server.subscriptionManager.create('demo', {
+    filter: {
+      sources: ['github', 'slack'],
+    },
+    delivery: {
+      channels: ['cron'],
+      cronSchedule: {
+        expression: '* * * * *', // Every minute for demo (use "0 9 * * *" for daily)
+        timezone: 'UTC',
+        aggregateEvents: true,
+        maxEventsPerDelivery: 50,
+      },
+    },
+    handler: {
+      type: 'agent',
+      systemPrompt: 'You are a digest summarizer. Create a brief summary of these events as a daily digest. Group by source, highlight important items.',
+      model: 'gpt-4o-mini',
+      maxTokens: 500,
+    },
+  });
+
+  // Start the scheduler for cron subscription
+  server.scheduler.startSubscription(cronSub);
+
   console.log(`Demo subscriptions created. Events will be sent to: ${NTFY_URL}`);
   console.log(`Subscribe to notifications: https://ntfy.sh/${NTFY_TOPIC}`);
   console.log(`Agent handlers configured for error events and analysis requests.`);
+  console.log(`Cron subscription active: events aggregated and delivered every minute.`);
 }
 
 /**
@@ -325,19 +352,29 @@ export function createAnalyzeEvent(
 export function getDemoInfo() {
   const server = getEventsServer();
   const subscriptions = server.subscriptionManager.listByClient('demo');
+  const schedulerInfo = server.getSchedulerInfo();
 
   return {
     ntfyTopic: NTFY_TOPIC,
     ntfyUrl: NTFY_URL,
     subscribeUrl: `https://ntfy.sh/${NTFY_TOPIC}`,
-    subscriptions: subscriptions.map(s => ({
-      id: s.id,
-      filter: s.filter,
-      handlerType: s.handler?.type,
-      handlerConfig: s.handler?.type === 'agent' ? {
-        model: (s.handler as AgentEventHandler).model,
-        systemPrompt: (s.handler as AgentEventHandler).systemPrompt?.substring(0, 50) + '...',
-      } : undefined,
-    })),
+    subscriptions: subscriptions.map(s => {
+      const scheduleJob = schedulerInfo.activeJobs.find(j => j.subscriptionId === s.id);
+      return {
+        id: s.id,
+        filter: s.filter,
+        delivery: s.delivery.channels,
+        handlerType: s.handler?.type,
+        handlerConfig: s.handler?.type === 'agent' ? {
+          model: (s.handler as AgentEventHandler).model,
+          systemPrompt: (s.handler as AgentEventHandler).systemPrompt?.substring(0, 50) + '...',
+        } : undefined,
+        schedule: scheduleJob ? {
+          type: scheduleJob.type,
+          nextRun: scheduleJob.nextRun?.toISOString(),
+          pendingEvents: scheduleJob.pendingEvents,
+        } : undefined,
+      };
+    }),
   };
 }

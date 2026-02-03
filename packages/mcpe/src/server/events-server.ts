@@ -17,6 +17,7 @@ import {
 } from '../types/index.js';
 import { SubscriptionManager } from './subscription-manager.js';
 import { HandlerExecutor, type HandlerExecutorConfig } from './handler-executor.js';
+import { EventScheduler } from './event-scheduler.js';
 
 /**
  * Options for creating an EventsServer
@@ -34,6 +35,11 @@ export interface EventsServerConfig {
  *
  * Provides a simple way to add event subscription functionality to an MCP server.
  * Events are delivered via MCP notifications.
+ *
+ * Supports three delivery modes:
+ * - **realtime**: Immediate delivery via MCP notification
+ * - **cron**: Recurring scheduled delivery (e.g., daily at 9am)
+ * - **scheduled**: One-time delivery at a specific date/time
  *
  * @example
  * ```typescript
@@ -62,6 +68,7 @@ export class EventsServer {
   readonly mcpServer: McpServer;
   readonly subscriptionManager: SubscriptionManager;
   readonly handlerExecutor: HandlerExecutor;
+  readonly scheduler: EventScheduler;
   private readonly eventsCapability: EventsCapability;
   private clientId: string = 'default';
 
@@ -86,6 +93,23 @@ export class EventsServer {
 
     this.subscriptionManager = new SubscriptionManager({
       maxSubscriptionsPerClient: this.eventsCapability.maxSubscriptions,
+    });
+
+    // Initialize scheduler for cron/scheduled delivery
+    this.scheduler = new EventScheduler({
+      onDeliverBatch: async (subscriptionId, events, subscription) => {
+        await this.deliverBatch(subscriptionId, events, subscription);
+      },
+      onScheduleComplete: (subscriptionId) => {
+        // Mark subscription as expired when scheduled delivery completes
+        const subscription = this.subscriptionManager.get(subscriptionId);
+        if (subscription && subscription.delivery.scheduledDelivery?.autoExpire !== false) {
+          this.subscriptionManager.update(subscriptionId, subscription.clientId, {
+            status: 'expired',
+          });
+          this.notifySubscriptionExpired(subscriptionId);
+        }
+      },
     });
 
     this.registerTools();
@@ -135,6 +159,15 @@ export class EventsServer {
         };
 
         const subscription = this.subscriptionManager.create(this.clientId, request);
+
+        // Start scheduler if using cron or scheduled delivery
+        if (
+          subscription.delivery.channels.includes('cron') ||
+          subscription.delivery.channels.includes('scheduled')
+        ) {
+          this.scheduler.startSubscription(subscription);
+        }
+
         return {
           content: [
             {
@@ -164,6 +197,9 @@ export class EventsServer {
         },
       },
       async (args) => {
+        // Stop scheduler before deleting
+        this.scheduler.stopSubscription(args.subscriptionId);
+
         const deleted = this.subscriptionManager.delete(args.subscriptionId, this.clientId);
         return {
           content: [
@@ -199,6 +235,8 @@ export class EventsServer {
                   delivery: s.delivery,
                   createdAt: s.createdAt,
                   expiresAt: s.expiresAt,
+                  nextRun: this.scheduler.getNextRun(s.id)?.toISOString(),
+                  pendingEvents: this.scheduler.getPendingCount(s.id),
                 })),
               }),
             },
@@ -218,6 +256,9 @@ export class EventsServer {
           },
         },
         async (args) => {
+          // Stop scheduler when paused
+          this.scheduler.stopSubscription(args.subscriptionId);
+
           const subscription = this.subscriptionManager.pause(args.subscriptionId, this.clientId);
           return {
             content: [
@@ -244,6 +285,15 @@ export class EventsServer {
         },
         async (args) => {
           const subscription = this.subscriptionManager.resume(args.subscriptionId, this.clientId);
+
+          // Restart scheduler when resumed
+          if (
+            subscription.delivery.channels.includes('cron') ||
+            subscription.delivery.channels.includes('scheduled')
+          ) {
+            this.scheduler.startSubscription(subscription);
+          }
+
           return {
             content: [
               {
@@ -277,6 +327,18 @@ export class EventsServer {
           delivery: args.delivery,
           expiresAt: args.expiresAt,
         });
+
+        // Restart scheduler if delivery changed
+        if (args.delivery) {
+          this.scheduler.stopSubscription(args.subscriptionId);
+          if (
+            subscription.delivery.channels.includes('cron') ||
+            subscription.delivery.channels.includes('scheduled')
+          ) {
+            this.scheduler.startSubscription(subscription);
+          }
+        }
+
         return {
           content: [
             {
@@ -335,8 +397,10 @@ export class EventsServer {
    * Send an event notification for a specific subscription
    */
   private async sendEventNotification(event: MCPEvent, subscription: Subscription): Promise<void> {
+    const { delivery } = subscription;
+
     // For realtime delivery, send immediately
-    if (subscription.delivery.channels.includes('realtime')) {
+    if (delivery.channels.includes('realtime')) {
       try {
         // Use the underlying server to send a notification
         await this.mcpServer.server.notification({
@@ -350,26 +414,84 @@ export class EventsServer {
         // Log error but don't throw - other subscriptions should still receive
         console.error(`Failed to send event notification to subscription ${subscription.id}:`, error);
       }
-    }
 
-    // Execute handler if configured
-    if (subscription.handler) {
-      try {
-        const result = await this.handlerExecutor.execute(event, subscription.handler, subscription.id);
-        if (!result.success) {
-          console.error(`Handler failed for subscription ${subscription.id}:`, result.error);
+      // Execute handler immediately for realtime
+      if (subscription.handler) {
+        try {
+          const result = await this.handlerExecutor.execute(event, subscription.handler, subscription.id);
+          if (!result.success) {
+            console.error(`Handler failed for subscription ${subscription.id}:`, result.error);
+          }
+        } catch (error) {
+          console.error(`Handler execution error for subscription ${subscription.id}:`, error);
         }
-      } catch (error) {
-        console.error(`Handler execution error for subscription ${subscription.id}:`, error);
       }
     }
 
-    // TODO: Handle cron and scheduled delivery
-    // For now, these would need to be handled by an external scheduler
+    // For cron/scheduled delivery, queue the event
+    if (delivery.channels.includes('cron') || delivery.channels.includes('scheduled')) {
+      this.scheduler.queueEvent(subscription.id, event);
+    }
   }
 
   /**
-   * Send a batch of events for a subscription (for cron/scheduled delivery)
+   * Deliver a batch of events for a subscription (called by scheduler)
+   */
+  private async deliverBatch(
+    subscriptionId: string,
+    events: MCPEvent[],
+    subscription: Subscription
+  ): Promise<void> {
+    console.log(`[EventsServer] Delivering batch of ${events.length} events for subscription ${subscriptionId}`);
+
+    // Send batch notification
+    try {
+      await this.mcpServer.server.notification({
+        method: MCPE_NOTIFICATIONS.BATCH,
+        params: {
+          events,
+          subscriptionId,
+        },
+      } as any);
+    } catch (error) {
+      console.error(`Failed to send batch notification to subscription ${subscriptionId}:`, error);
+    }
+
+    // Execute handler with all events
+    if (subscription.handler) {
+      // For batch delivery, we can either:
+      // 1. Execute handler once with all events (better for summaries)
+      // 2. Execute handler for each event
+      // We'll do option 1 by creating a synthetic "batch" event
+      const batchEvent: MCPEvent = {
+        id: `batch-${Date.now()}`,
+        type: 'events.batch',
+        data: {
+          events,
+          count: events.length,
+          subscriptionId,
+        },
+        metadata: {
+          source: 'system' as any,
+          priority: 'normal',
+          timestamp: new Date().toISOString(),
+          tags: ['batch'],
+        },
+      };
+
+      try {
+        const result = await this.handlerExecutor.execute(batchEvent, subscription.handler, subscriptionId);
+        if (!result.success) {
+          console.error(`Batch handler failed for subscription ${subscriptionId}:`, result.error);
+        }
+      } catch (error) {
+        console.error(`Batch handler execution error for subscription ${subscriptionId}:`, error);
+      }
+    }
+  }
+
+  /**
+   * Send a batch of events for a subscription (public API)
    */
   async sendBatch(events: MCPEvent[], subscriptionId: string): Promise<void> {
     try {
@@ -402,6 +524,22 @@ export class EventsServer {
   }
 
   /**
+   * Get scheduler info (for debugging/monitoring)
+   */
+  getSchedulerInfo(): {
+    activeJobs: Array<{
+      subscriptionId: string;
+      type: 'cron' | 'scheduled';
+      nextRun?: Date;
+      pendingEvents: number;
+    }>;
+  } {
+    return {
+      activeJobs: this.scheduler.getActiveJobs(),
+    };
+  }
+
+  /**
    * Connect to a transport
    */
   async connect(transport: import('@modelcontextprotocol/sdk/shared/transport.js').Transport): Promise<void> {
@@ -412,6 +550,8 @@ export class EventsServer {
    * Close the connection
    */
   async close(): Promise<void> {
+    // Stop all scheduled jobs before closing
+    this.scheduler.stopAll();
     await this.mcpServer.close();
   }
 

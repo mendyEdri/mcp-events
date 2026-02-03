@@ -6,3 +6,9 @@ export {
   type AgentHandlerCallback,
   type HandlerExecutorConfig,
 } from './handler-executor.js';
+export {
+  EventScheduler,
+  type EventSchedulerConfig,
+  type BatchDeliveryCallback,
+  type ScheduleCompleteCallback,
+} from './event-scheduler.js';

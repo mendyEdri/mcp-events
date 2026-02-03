@@ -69,6 +69,12 @@ export {
   type AgentHandlerCallback,
   type HandlerExecutorConfig,
 } from './server/index.js';
+export {
+  EventScheduler,
+  type EventSchedulerConfig,
+  type BatchDeliveryCallback,
+  type ScheduleCompleteCallback,
+} from './server/index.js';
 
 // Client
 export {
@@ -79,6 +85,12 @@ export {
   type SubscriptionExpiredCallback,
   type SubscribeResult,
   type ListSubscriptionsResult,
+} from './client/index.js';
+export {
+  SubscriptionStore,
+  type StoredSubscription,
+  type SubscriptionsFile,
+  type SubscriptionStoreOptions,
 } from './client/index.js';
 
 // Utils
