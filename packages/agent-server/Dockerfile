@@ -14,16 +14,14 @@ COPY package.json pnpm-workspace.yaml ./
 COPY tsconfig.json ./
 
 # Copy all packages (needed for workspace dependencies)
-COPY packages/core ./packages/core
-COPY packages/client ./packages/client
+COPY packages/mcpe ./packages/mcpe
 COPY packages/agent-server ./packages/agent-server
 
 # Install dependencies (not using frozen-lockfile since lockfile has private registry URLs)
 RUN pnpm install
 
-# Build core first, then client, then agent-server
-RUN pnpm --filter @esmcp/core build && \
-    pnpm --filter @esmcp/client build && \
+# Build mcpe first, then agent-server
+RUN pnpm --filter @mcpe/core build && \
     pnpm --filter @esmcp/agent-server build
 
 # Production stage
@@ -41,11 +39,8 @@ RUN echo "registry=https://registry.npmjs.org/" > .npmrc
 COPY package.json pnpm-workspace.yaml ./
 
 # Copy built packages
-COPY --from=builder /app/packages/core/package.json ./packages/core/package.json
-COPY --from=builder /app/packages/core/dist ./packages/core/dist
-
-COPY --from=builder /app/packages/client/package.json ./packages/client/package.json
-COPY --from=builder /app/packages/client/dist ./packages/client/dist
+COPY --from=builder /app/packages/mcpe/package.json ./packages/mcpe/package.json
+COPY --from=builder /app/packages/mcpe/dist ./packages/mcpe/dist
 
 COPY --from=builder /app/packages/agent-server/package.json ./packages/agent-server/package.json
 COPY --from=builder /app/packages/agent-server/dist ./packages/agent-server/dist
