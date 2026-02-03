@@ -1,6 +1,6 @@
 #!/usr/bin/env npx tsx
 /**
- * CLI Client for ESMCP
+ * CLI Client for ASP (Agent Subscription Protocol)
  *
  * Subscribe to events from the command line and receive them in real-time.
  * Works alongside browser clients - all clients receive the same events.
@@ -13,10 +13,10 @@
  *   npx tsx client.ts --interactive      # Interactive mode with menu
  */
 
-import { ESMCPClient } from '@esmcp/client';
+import { ASPClient, WebSocketTransport } from '@esmcp/client';
 import type { ESMCPEvent, Subscription } from '@esmcp/core';
 
-const SERVER_URL = process.env.ESMCP_SERVER || 'ws://localhost:8080';
+const SERVER_URL = process.env.ASP_SERVER || process.env.ESMCP_SERVER || 'ws://localhost:8080';
 
 interface CLIOptions {
   sources?: string[];
@@ -147,19 +147,23 @@ async function runClient(options: CLIOptions) {
   console.log('🔌 Connecting to server...');
   console.log(`   URL: ${SERVER_URL}`);
 
-  const client = new ESMCPClient({
-    serverUrl: SERVER_URL,
+  const transport = new WebSocketTransport({
+    url: SERVER_URL,
+    reconnect: true,
+    reconnectInterval: 1000,
+    maxReconnectAttempts: 5,
+  });
+
+  const client = new ASPClient({
+    transport,
     clientInfo: {
-      name: 'ESMCP CLI Client',
+      name: 'ASP CLI Client',
       version: '1.0.0',
     },
     capabilities: {
       websocket: true,
       apns: false,
     },
-    reconnect: true,
-    reconnectInterval: 1000,
-    maxReconnectAttempts: 5,
   });
 
   // Set up event handler
@@ -172,7 +176,10 @@ async function runClient(options: CLIOptions) {
   await client.connect();
   console.log('✅ Connected!');
   console.log(`   Server: ${client.serverInfo?.name} v${client.serverInfo?.version}`);
-  console.log(`   Capabilities: ${client.serverCapabilities?.supportedProviders?.join(', ')}`);
+
+  // Use ASP capability discovery
+  const capabilities = await client.getCapabilities();
+  console.log(`   Capabilities: ${capabilities.filters.supportedSources.join(', ')}`);
   console.log();
 
   // Create subscription based on filters
@@ -227,17 +234,21 @@ async function runClient(options: CLIOptions) {
 async function runInteractive() {
   console.log('🔌 Connecting to server...');
 
-  const client = new ESMCPClient({
-    serverUrl: SERVER_URL,
+  const transport = new WebSocketTransport({
+    url: SERVER_URL,
+    reconnect: true,
+  });
+
+  const client = new ASPClient({
+    transport,
     clientInfo: {
-      name: 'ESMCP CLI Client (Interactive)',
+      name: 'ASP CLI Client (Interactive)',
       version: '1.0.0',
     },
     capabilities: {
       websocket: true,
       apns: false,
     },
-    reconnect: true,
   });
 
   // Buffer events for display

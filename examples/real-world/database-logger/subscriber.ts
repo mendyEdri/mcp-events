@@ -1,6 +1,6 @@
 #!/usr/bin/env npx tsx
 /**
- * Database Logger - Real-World ESMCP Subscriber
+ * Database Logger - Real-World ASP Subscriber
  *
  * Persists all events to SQLite for audit trails and analytics.
  *
@@ -11,12 +11,12 @@
  * - Health monitoring
  */
 
-import { ESMCPClient } from '@esmcp/client';
+import { ASPClient, WebSocketTransport } from '@esmcp/client';
 import type { ESMCPEvent } from '@esmcp/core';
 import Database from 'better-sqlite3';
 
 // Configuration
-const ESMCP_SERVER = process.env.ESMCP_SERVER || 'ws://localhost:8080';
+const ASP_SERVER = process.env.ASP_SERVER || process.env.ESMCP_SERVER || 'ws://localhost:8080';
 const DB_PATH = process.env.DB_PATH || './events.db';
 const RETENTION_DAYS = parseInt(process.env.RETENTION_DAYS || '30', 10);
 const SUBSCRIBER_NAME = process.env.SUBSCRIBER_NAME || 'database-logger';
@@ -174,10 +174,16 @@ async function main() {
   // Cleanup old events on startup
   cleanupOldEvents();
 
-  console.log(`🔌 Connecting to ${ESMCP_SERVER}...`);
+  console.log(`🔌 Connecting to ${ASP_SERVER}...`);
 
-  const client = new ESMCPClient({
-    serverUrl: ESMCP_SERVER,
+  const transport = new WebSocketTransport({
+    url: ASP_SERVER,
+    reconnect: true,
+    reconnectInterval: 5000,
+  });
+
+  const client = new ASPClient({
+    transport,
     clientInfo: {
       name: SUBSCRIBER_NAME,
       version: '1.0.0',
@@ -185,8 +191,6 @@ async function main() {
     capabilities: {
       websocket: true,
     },
-    reconnect: true,
-    reconnectInterval: 5000,
   });
 
   // Handle all events
@@ -204,7 +208,7 @@ async function main() {
 
   // Connect and subscribe
   await client.connect();
-  console.log('✅ Connected to ESMCP server');
+  console.log('✅ Connected to ASP server');
   console.log();
 
   // Subscribe to all events

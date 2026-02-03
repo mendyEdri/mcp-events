@@ -1,6 +1,6 @@
 #!/usr/bin/env npx tsx
 /**
- * Email Digest - Real-World ESMCP Subscriber
+ * Email Digest - Real-World ASP Subscriber
  *
  * Collects events and sends batched email digests.
  *
@@ -12,11 +12,11 @@
  * DIGEST_SCHEDULE=daily|hourly
  */
 
-import { ESMCPClient } from '@esmcp/client';
+import { ASPClient, WebSocketTransport } from '@esmcp/client';
 import type { ESMCPEvent } from '@esmcp/core';
 import nodemailer from 'nodemailer';
 
-const ESMCP_SERVER = process.env.ESMCP_SERVER || 'ws://localhost:8080';
+const ASP_SERVER = process.env.ASP_SERVER || process.env.ESMCP_SERVER || 'ws://localhost:8080';
 const SMTP_HOST = process.env.SMTP_HOST || 'smtp.gmail.com';
 const SMTP_PORT = parseInt(process.env.SMTP_PORT || '587', 10);
 const SMTP_USER = process.env.SMTP_USER || '';
@@ -132,10 +132,14 @@ async function main() {
     console.log();
   }
 
-  const client = new ESMCPClient({
-    serverUrl: ESMCP_SERVER,
-    clientInfo: { name: 'email-digest', version: '1.0.0' },
+  const transport = new WebSocketTransport({
+    url: ASP_SERVER,
     reconnect: true,
+  });
+
+  const client = new ASPClient({
+    transport,
+    clientInfo: { name: 'email-digest', version: '1.0.0' },
   });
 
   client.onEvent('*', (event: ESMCPEvent) => {
@@ -145,7 +149,7 @@ async function main() {
   });
 
   await client.connect();
-  console.log('✅ Connected to ESMCP server');
+  console.log('✅ Connected to ASP server');
 
   const subscription = await client.subscribe({
     filter: {},
