@@ -6,11 +6,16 @@
   "scripts": {
     "generate-keys": "npx tsx generate-keys.ts",
     "start:server": "npx tsx server.ts",
+    "start:ws": "npx tsx server-ws.ts",
+    "receive": "npx tsx cli-receive.ts",
+    "publish": "npx tsx cli-publish.ts",
     "test:send": "npx tsx test-send.ts"
   },
   "dependencies": {
     "@esmcp/webpush": "workspace:*",
     "@esmcp/core": "workspace:*",
+    "@esmcp/server": "workspace:*",
+    "@esmcp/client": "workspace:*",
     "express": "^4.18.0"
   },
   "devDependencies": {
