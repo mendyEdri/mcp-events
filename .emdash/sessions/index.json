@@ -3,11 +3,11 @@
     {
       "name": "_autosave",
       "created_at": "2026-02-02T22:26:43.316611Z",
-      "updated_at": "2026-02-03T15:02:49.024802Z",
+      "updated_at": "2026-02-03T15:06:46.361631Z",
       "message_count": 10,
       "model": "accounts/fireworks/models/kimi-k2p5",
       "mode": "code",
-      "summary": "{\"success\": true, \"data\": {\"path\": \"packages/server/src/delivery/coordinator.ts\", \"content\": \"import"
+      "summary": "           "
     }
   ],
   "active": null

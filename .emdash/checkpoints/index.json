@@ -2,6 +2,29 @@
   "version": "1.0",
   "checkpoints": [
     {
+      "id": "cp_1ea73373-a7df-4d92-9320-c4ea6fd3387b_006",
+      "session_id": "1ea73373-a7df-4d92-9320-c4ea6fd3387b",
+      "iteration": 6,
+      "timestamp": "2026-02-03T17:02:49.094519",
+      "commit_sha": "29f2bf083af91ef822e099d34297873df4730a7f",
+      "summary": "Response to: what types of subscribe types we have in the protocol? map them for me",
+      "tools_used": [
+        "read_file"
+      ],
+      "files_modified": [
+        ".emdash/checkpoints/index.json",
+        ".emdash/index/kuzu_db.wal",
+        ".emdash/sessions/_autosave.json",
+        ".emdash/sessions/index.json",
+        "packages/agent-server/src/server.ts"
+      ],
+      "token_usage": {
+        "input": 1662317,
+        "output": 28227,
+        "thinking": 4605
+      }
+    },
+    {
       "id": "cp_1ea73373-a7df-4d92-9320-c4ea6fd3387b_005",
       "session_id": "1ea73373-a7df-4d92-9320-c4ea6fd3387b",
       "iteration": 5,
