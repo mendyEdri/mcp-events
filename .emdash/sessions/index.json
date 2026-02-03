@@ -3,11 +3,11 @@
     {
       "name": "_autosave",
       "created_at": "2026-02-02T22:26:43.316611Z",
-      "updated_at": "2026-02-03T15:01:43.942992Z",
+      "updated_at": "2026-02-03T15:02:49.024802Z",
       "message_count": 10,
       "model": "accounts/fireworks/models/kimi-k2p5",
       "mode": "code",
-      "summary": "{\"success\": true, \"data\": {\"path\": \"packages/server/src/device/store.ts\", \"content\": \"export interfa"
+      "summary": "{\"success\": true, \"data\": {\"path\": \"packages/server/src/delivery/coordinator.ts\", \"content\": \"import"
     }
   ],
   "active": null
