@@ -80,10 +80,10 @@ export class EventHub {
       supportedProviders: options.supportedProviders ?? ['github', 'gmail', 'slack', 'custom'],
     };
 
-    // Build full ASP capabilities
+    // Build full MCPE capabilities
     this.aspCapabilities = {
       protocolVersion: ASP_PROTOCOL_VERSION,
-      protocolName: 'asp',
+      protocolName: 'mcpe',
       serverInfo: this.serverInfo,
       subscriptions: {
         maxActive: options.maxSubscriptionsPerClient ?? 100,

@@ -1,4 +1,4 @@
-# Agent Subscription Protocol (ASP)
+# MCP Events (MCPE)
 
 > **A proposed extension to the Model Context Protocol (MCP) for real-time event subscriptions**
 
@@ -20,13 +20,13 @@ Today, agents must either:
 2. **Use proprietary webhooks** - No standard, each integration is custom
 3. **Stay connected indefinitely** - Not practical for most agent architectures
 
-## The Proposal: Agent Subscription Protocol
+## The Proposal: MCP Events (MCPE)
 
-ASP extends MCP's design philosophy to event subscriptions:
+MCPE extends MCP's design philosophy to event subscriptions:
 
-| MCP | ASP |
-|-----|-----|
-| `tools/list` | `asp/capabilities` |
+| MCP | MCPE |
+|-----|------|
+| `tools/list` | `mcpe/capabilities` |
 | `tools/call` | `subscriptions/create` |
 | Tool schemas for LLM reasoning | Operation schemas for subscription reasoning |
 | Request/Response | Subscribe/Notify |
@@ -48,18 +48,18 @@ ASP extends MCP's design philosophy to event subscriptions:
 │                                                                         │
 └───────────────────────────────┬─────────────────────────────────────────┘
                                 │
-                    ASP Protocol (JSON-RPC 2.0)
+                    MCPE Protocol (JSON-RPC 2.0)
                                 │
                                 ▼
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                           ASP SERVER (Hub)                               │
+│                          MCPE SERVER (Hub)                               │
 │                                                                         │
 │  ┌──────────────┐   ┌──────────────────┐   ┌──────────────────────┐    │
 │  │ Capability   │   │  Subscription    │   │  Delivery            │    │
 │  │ Discovery    │   │  Manager         │   │  Coordinator         │    │
 │  │              │   │                  │   │                      │    │
-│  │ asp/caps     │   │ create/remove    │   │ WebSocket│SSE│Push   │    │
-│  │ asp/schema   │   │ pause/resume     │   │                      │    │
+│  │ mcpe/caps    │   │ create/remove    │   │ WebSocket│SSE│Push   │    │
+│  │ mcpe/schema  │   │ pause/resume     │   │                      │    │
 │  └──────────────┘   └──────────────────┘   └──────────────────────┘    │
 │                                                                         │
 └───────────────────────────────┬─────────────────────────────────────────┘
@@ -79,7 +79,7 @@ ASP extends MCP's design philosophy to event subscriptions:
 
 ```typescript
 // Agent asks: "What can I subscribe to?"
-{ "method": "asp/capabilities" }
+{ "method": "mcpe/capabilities" }
 
 // Server responds with full capability description
 {
@@ -105,7 +105,7 @@ ASP extends MCP's design philosophy to event subscriptions:
 
 ```typescript
 // Agent asks: "How do I create a subscription?"
-{ "method": "asp/schema", "params": { "operations": ["subscribe"] } }
+{ "method": "mcpe/schema", "params": { "operations": ["subscribe"] } }
 
 // Server returns JSON Schema that LLMs can reason about
 {
@@ -171,10 +171,10 @@ ASP extends MCP's design philosophy to event subscriptions:
 ## Client SDK
 
 ```typescript
-import { ASPClient, WebSocketTransport } from '@anthropic/asp-client';
+import { MCPEClient, WebSocketTransport } from '@anthropic/mcpe-client';
 
 // Create client with any transport (like MCP)
-const client = new ASPClient({
+const client = new MCPEClient({
   transport: new WebSocketTransport({ url: 'ws://localhost:8080' }),
   clientInfo: { name: 'MyAgent', version: '1.0.0' }
 });
@@ -214,7 +214,7 @@ await client.unsubscribe(subscription.id);         // Remove
 
 ## Transport Options
 
-ASP supports multiple transports, enabling different deployment scenarios:
+MCPE supports multiple transports, enabling different deployment scenarios:
 
 | Transport | Use Case | Pros | Cons |
 |-----------|----------|------|------|
@@ -229,11 +229,11 @@ This repository contains a working reference implementation:
 
 ```
 packages/
-├── core/      # @esmcp/core - Protocol types and schemas
-├── client/    # @esmcp/client - ASPClient SDK
-├── server/    # @esmcp/server - EventHub reference server
-├── sse/       # @esmcp/sse - SSE transport
-└── webpush/   # @esmcp/webpush - Web Push transport
+├── core/      # @mcpe/core - Protocol types and schemas
+├── client/    # @mcpe/client - MCPEClient SDK
+├── server/    # @mcpe/server - EventHub reference server
+├── sse/       # @mcpe/sse - SSE transport
+└── webpush/   # @mcpe/webpush - Web Push transport
 ```
 
 ### Quick Start
@@ -256,8 +256,8 @@ npx tsx cli-publish.ts github.push '{"repo":"test","commits":3}'
 
 ## Why Not Just Use Webhooks?
 
-| Feature | Webhooks | ASP |
-|---------|----------|-----|
+| Feature | Webhooks | MCPE |
+|---------|----------|------|
 | Agent controls subscription | No (server configured) | Yes |
 | Pause/Resume | No | Yes |
 | Filter by priority | No | Yes |
@@ -268,10 +268,10 @@ npx tsx cli-publish.ts github.push '{"repo":"test","commits":3}'
 
 ## Relationship to MCP
 
-ASP is designed to **complement MCP**, not replace it:
+MCPE is designed to **complement MCP**, not replace it:
 
 - **MCP Tools** = Agent performs actions (imperative)
-- **ASP Subscriptions** = Agent receives events (reactive)
+- **MCPE Subscriptions** = Agent receives events (reactive)
 
 Together, they enable fully autonomous agents that can both **act** and **react**.
 
@@ -279,8 +279,8 @@ Together, they enable fully autonomous agents that can both **act** and **react*
 // MCP: Agent acts
 await mcp.callTool('github_create_issue', { title: 'Bug', body: '...' });
 
-// ASP: Agent reacts
-asp.onEvent('github.issue.commented', async (event) => {
+// MCPE: Agent reacts
+mcpe.onEvent('github.issue.commented', async (event) => {
   // Respond to comments on issues the agent created
   await mcp.callTool('github_add_comment', {
     issue: event.data.issue_number,

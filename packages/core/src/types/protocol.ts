@@ -2,11 +2,11 @@ import { z } from 'zod';
 import { DeliveryChannelSchema, DeliveryPrioritySchema } from './subscriptions.js';
 
 /**
- * Agent Subscription Protocol (ASP) Specification
+ * MCP Events (MCPE) Protocol Specification
  *
- * ASP is an open protocol that enables AI agents to subscribe to and receive
+ * MCPE is an open protocol that enables AI agents to subscribe to and receive
  * events from external systems. Inspired by MCP (Model Context Protocol),
- * ASP gives agents control over their event subscriptions.
+ * MCPE gives agents control over their event subscriptions.
  *
  * Design Principles:
  * 1. Agent-Centric: Agents decide when to subscribe/unsubscribe
@@ -16,10 +16,14 @@ import { DeliveryChannelSchema, DeliveryPrioritySchema } from './subscriptions.j
  */
 
 // Protocol version following semver-like date format
-export const ASP_PROTOCOL_VERSION = '2025-01-01';
+export const MCPE_PROTOCOL_VERSION = '2025-01-01';
 
 // Protocol name for identification
-export const ASP_PROTOCOL_NAME = 'asp';
+export const MCPE_PROTOCOL_NAME = 'mcpe';
+
+// Legacy exports for backwards compatibility
+export const ASP_PROTOCOL_VERSION = MCPE_PROTOCOL_VERSION;
+export const ASP_PROTOCOL_NAME = MCPE_PROTOCOL_NAME;
 
 /**
  * Protocol Methods
@@ -30,13 +34,13 @@ export const ASP_PROTOCOL_NAME = 'asp';
  * - events/*: Event handling
  * - devices/*: Push notification device management
  */
-export const ASPMethods = {
+export const MCPEMethods = {
   // Core protocol
   Initialize: 'initialize',
 
   // Capability & Schema Discovery (agent-facing)
-  GetCapabilities: 'asp/capabilities',
-  GetSchema: 'asp/schema',
+  GetCapabilities: 'mcpe/capabilities',
+  GetSchema: 'mcpe/schema',
 
   // Subscription Management
   SubscriptionCreate: 'subscriptions/create',
@@ -58,7 +62,11 @@ export const ASPMethods = {
   DeviceInvalidate: 'devices/invalidate',
 } as const;
 
-export type ASPMethod = (typeof ASPMethods)[keyof typeof ASPMethods];
+// Legacy export for backwards compatibility
+export const ASPMethods = MCPEMethods;
+
+export type MCPEMethod = (typeof MCPEMethods)[keyof typeof MCPEMethods];
+export type ASPMethod = MCPEMethod;
 
 /**
  * Capability Discovery Schema
@@ -67,10 +75,10 @@ export type ASPMethod = (typeof ASPMethods)[keyof typeof ASPMethods];
  * Similar to MCP's tool listing, this enables LLMs to reason about
  * what they can subscribe to.
  */
-export const ASPCapabilitiesSchema = z.object({
+export const MCPECapabilitiesSchema = z.object({
   // Protocol info
   protocolVersion: z.string(),
-  protocolName: z.literal('asp'),
+  protocolName: z.literal('mcpe'),
 
   // Server info
   serverInfo: z.object({
@@ -109,7 +117,11 @@ export const ASPCapabilitiesSchema = z.object({
   }).optional(),
 });
 
-export type ASPCapabilities = z.infer<typeof ASPCapabilitiesSchema>;
+// Legacy export
+export const ASPCapabilitiesSchema = MCPECapabilitiesSchema;
+
+export type MCPECapabilities = z.infer<typeof MCPECapabilitiesSchema>;
+export type ASPCapabilities = MCPECapabilities;
 
 /**
  * Schema Discovery
@@ -117,7 +129,7 @@ export type ASPCapabilities = z.infer<typeof ASPCapabilitiesSchema>;
  * Provides JSON Schema definitions for subscription operations.
  * This enables LLMs to understand the structure of subscribe/unsubscribe calls.
  */
-export const ASPOperationSchema = z.object({
+export const MCPEOperationSchema = z.object({
   name: z.string().describe('Operation name'),
   description: z.string().describe('Human-readable description for LLM reasoning'),
   method: z.string().describe('JSON-RPC method name'),
@@ -130,23 +142,31 @@ export const ASPOperationSchema = z.object({
   })).optional().describe('Example inputs and outputs'),
 });
 
-export type ASPOperation = z.infer<typeof ASPOperationSchema>;
+// Legacy export
+export const ASPOperationSchema = MCPEOperationSchema;
 
-export const ASPSchemaResponseSchema = z.object({
-  operations: z.array(ASPOperationSchema),
+export type MCPEOperation = z.infer<typeof MCPEOperationSchema>;
+export type ASPOperation = MCPEOperation;
+
+export const MCPESchemaResponseSchema = z.object({
+  operations: z.array(MCPEOperationSchema),
 });
 
-export type ASPSchemaResponse = z.infer<typeof ASPSchemaResponseSchema>;
+// Legacy export
+export const ASPSchemaResponseSchema = MCPESchemaResponseSchema;
+
+export type MCPESchemaResponse = z.infer<typeof MCPESchemaResponseSchema>;
+export type ASPSchemaResponse = MCPESchemaResponse;
 
 /**
  * Pre-defined operation schemas for agent consumption
  * These are the "tools" that agents can use to manage their subscriptions
  */
-export const ASPOperationDefinitions: ASPOperation[] = [
+export const MCPEOperationDefinitions: MCPEOperation[] = [
   {
     name: 'subscribe',
     description: 'Subscribe to events matching specified criteria. Use this when you want to be notified about specific events from external systems like GitHub, Slack, or email.',
-    method: ASPMethods.SubscriptionCreate,
+    method: MCPEMethods.SubscriptionCreate,
     inputSchema: {
       type: 'object',
       properties: {
@@ -243,7 +263,7 @@ export const ASPOperationDefinitions: ASPOperation[] = [
   {
     name: 'unsubscribe',
     description: 'Remove an active subscription. Use this when you no longer need to receive events for a particular subscription.',
-    method: ASPMethods.SubscriptionRemove,
+    method: MCPEMethods.SubscriptionRemove,
     inputSchema: {
       type: 'object',
       properties: {
@@ -272,7 +292,7 @@ export const ASPOperationDefinitions: ASPOperation[] = [
   {
     name: 'listSubscriptions',
     description: 'List all active subscriptions. Use this to see what events you are currently subscribed to.',
-    method: ASPMethods.SubscriptionList,
+    method: MCPEMethods.SubscriptionList,
     inputSchema: {
       type: 'object',
       properties: {
@@ -305,7 +325,7 @@ export const ASPOperationDefinitions: ASPOperation[] = [
   {
     name: 'updateSubscription',
     description: 'Modify an existing subscription. Use this to change filter criteria or delivery preferences without creating a new subscription.',
-    method: ASPMethods.SubscriptionUpdate,
+    method: MCPEMethods.SubscriptionUpdate,
     inputSchema: {
       type: 'object',
       properties: {
@@ -334,7 +354,7 @@ export const ASPOperationDefinitions: ASPOperation[] = [
   {
     name: 'pauseSubscription',
     description: 'Temporarily pause a subscription. Events will not be delivered until resumed.',
-    method: ASPMethods.SubscriptionPause,
+    method: MCPEMethods.SubscriptionPause,
     inputSchema: {
       type: 'object',
       properties: {
@@ -357,7 +377,7 @@ export const ASPOperationDefinitions: ASPOperation[] = [
   {
     name: 'resumeSubscription',
     description: 'Resume a paused subscription. Events will start being delivered again.',
-    method: ASPMethods.SubscriptionResume,
+    method: MCPEMethods.SubscriptionResume,
     inputSchema: {
       type: 'object',
       properties: {
@@ -380,7 +400,7 @@ export const ASPOperationDefinitions: ASPOperation[] = [
   {
     name: 'acknowledgeEvent',
     description: 'Acknowledge receipt of an event. Some delivery modes require acknowledgment to prevent redelivery.',
-    method: ASPMethods.EventAcknowledge,
+    method: MCPEMethods.EventAcknowledge,
     inputSchema: {
       type: 'object',
       properties: {
@@ -406,14 +426,17 @@ export const ASPOperationDefinitions: ASPOperation[] = [
   },
 ];
 
+// Legacy export
+export const ASPOperationDefinitions = MCPEOperationDefinitions;
+
 /**
  * Default server capabilities
  */
-export const defaultASPCapabilities: ASPCapabilities = {
-  protocolVersion: ASP_PROTOCOL_VERSION,
-  protocolName: 'asp',
+export const defaultMCPECapabilities: MCPECapabilities = {
+  protocolVersion: MCPE_PROTOCOL_VERSION,
+  protocolName: 'mcpe',
   serverInfo: {
-    name: 'ASP Server',
+    name: 'MCPE Server',
     version: '1.0.0',
   },
   subscriptions: {
@@ -440,18 +463,25 @@ export const defaultASPCapabilities: ASPCapabilities = {
   },
 };
 
+// Legacy export
+export const defaultASPCapabilities = defaultMCPECapabilities;
+
 /**
- * Transport types supported by ASP
- * Unlike MCP which primarily uses stdio, ASP supports multiple transports
+ * Transport types supported by MCPE
+ * Unlike MCP which primarily uses stdio, MCPE supports multiple transports
  * for different use cases (real-time, firewall-friendly, offline)
  */
-export const ASPTransportTypes = {
+export const MCPETransportTypes = {
   WebSocket: 'websocket',
   SSE: 'sse',
   Stdio: 'stdio',
 } as const;
 
-export type ASPTransportType = (typeof ASPTransportTypes)[keyof typeof ASPTransportTypes];
+// Legacy export
+export const ASPTransportTypes = MCPETransportTypes;
+
+export type MCPETransportType = (typeof MCPETransportTypes)[keyof typeof MCPETransportTypes];
+export type ASPTransportType = MCPETransportType;
 
 /**
  * Event handler registration
