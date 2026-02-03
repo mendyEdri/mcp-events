@@ -1,0 +1,36 @@
+{
+  "name": "@esmcp/agent-server",
+  "version": "1.0.0",
+  "description": "MCPE Agent Server with AI SDK and Hono",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc",
+    "clean": "rm -rf dist",
+    "typecheck": "tsc --noEmit",
+    "start": "node dist/index.js",
+    "dev": "node --loader ts-node/esm src/index.ts"
+  },
+  "dependencies": {
+    "@esmcp/client": "workspace:*",
+    "@esmcp/core": "workspace:*",
+    "@ai-sdk/openai": "^1.0.0",
+    "ai": "^4.0.0",
+    "hono": "^4.0.0",
+    "@hono/node-server": "^1.13.0",
+    "zod": "^3.22.0",
+    "uuid": "^9.0.0"
+  },
+  "devDependencies": {
+    "@types/uuid": "^9.0.0",
+    "typescript": "^5.3.0"
+  }
+}

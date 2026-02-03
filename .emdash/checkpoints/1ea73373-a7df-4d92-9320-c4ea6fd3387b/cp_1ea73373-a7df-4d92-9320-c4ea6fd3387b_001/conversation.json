@@ -1,5 +1,5 @@
 {
-  "name": "_autosave",
+  "version": "1.0",
   "messages": [
     {
       "role": "user",
@@ -62,6 +62,10 @@
     }
   ],
   "model": "accounts/fireworks/models/kimi-k2p5",
-  "mode": "code",
-  "session_id": "1ea73373-a7df-4d92-9320-c4ea6fd3387b"
+  "system_prompt_hash": "296664dcc8b002a7",
+  "token_usage": {
+    "input": 30935,
+    "output": 750,
+    "thinking": 185
+  }
 }

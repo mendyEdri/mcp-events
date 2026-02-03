@@ -14,7 +14,25 @@
       "Bash(pnpm typecheck:*)",
       "Bash(pnpm --filter \"@esmcp/*\" build:*)",
       "Bash(curl:*)",
-      "Bash(npx tsx:*)"
+      "Bash(npx tsx:*)",
+      "Bash(git pull:*)",
+      "Bash(git stash:*)",
+      "Bash(ln:*)",
+      "Bash(lsof:*)",
+      "Bash(xargs kill:*)",
+      "Bash(git push:*)",
+      "Bash(git reset:*)",
+      "Bash(git add:*)",
+      "Bash(xargs:*)",
+      "Bash(pnpm store prune:*)",
+      "Bash(fly apps create:*)",
+      "Bash(fly secrets set:*)",
+      "Bash(npm config set:*)",
+      "Bash(pnpm config:*)",
+      "Bash(pnpm --filter @esmcp/core build:*)",
+      "Bash(pnpm --filter @esmcp/client build:*)",
+      "Bash(pnpm --filter @esmcp/agent-server build:*)",
+      "Bash(fly deploy:*)"
     ]
   }
 }

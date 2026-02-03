@@ -1,0 +1,42 @@
+{
+  "id": "default",
+  "name": "default",
+  "description": "",
+  "tasks": [
+    {
+      "id": "task-9659f0a4",
+      "title": "Create CLI subscription client",
+      "description": "Build a CLI client that can subscribe to events and display them in the terminal, working alongside browser clients",
+      "status": "completed",
+      "depends_on": [],
+      "labels": [],
+      "claimed_by": "session-9acde6de",
+      "claimed_at": "2026-02-02T22:29:10.525580",
+      "created_at": "2026-02-02T22:29:07.332429",
+      "updated_at": "2026-02-02T22:30:21.044684",
+      "created_by": "session-9acde6de",
+      "priority": 0,
+      "order": 0,
+      "version": 3
+    },
+    {
+      "id": "task-4692b0b2",
+      "title": "Create real-world subscriber examples directory",
+      "description": "Build practical, production-ready subscriber implementations for common use cases like GitHub webhooks, Slack bots, email notifications, database logging, etc.",
+      "status": "completed",
+      "depends_on": [],
+      "labels": [],
+      "claimed_by": "session-9acde6de",
+      "claimed_at": "2026-02-02T22:36:25.418919",
+      "created_at": "2026-02-02T22:36:23.168161",
+      "updated_at": "2026-02-02T22:38:55.982595",
+      "created_by": "session-9acde6de",
+      "priority": 0,
+      "order": 1,
+      "version": 3
+    }
+  ],
+  "created_at": "2026-02-02T22:29:07.332193",
+  "updated_at": "2026-02-02T22:38:55.982606",
+  "active_sessions": []
+}
