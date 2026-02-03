@@ -2,12 +2,44 @@ import { generateText, tool } from 'ai';
 import { createOpenAI } from '@ai-sdk/openai';
 import { z } from 'zod';
 import { getMCPEInstance, type SubscriptionInfo } from './mcpe-integration.js';
-import type { EventFilter, EventSource } from '@mcpe/core';
+import type { EventFilter, EventSource, ScheduledTaskResult } from '@mcpe/core';
+import { getSubscriptionsJSON, formatSubscriptionsForDisplay, setSubscriptionEnabled } from './mcpe-config.js';
 
 // Create OpenAI-compatible provider with custom base URL (Wix API)
 const openai = createOpenAI({
   baseURL: process.env.OPENAI_BASE_URL ?? 'https://www.wixapis.com/openai/v1',
   apiKey: process.env.OPENAI_API_KEY,
+});
+
+// SSE clients waiting for delayed responses
+type SSEClient = (data: ScheduledTaskResult) => void;
+const sseClients: Set<SSEClient> = new Set();
+
+export function addSSEClient(client: SSEClient): () => void {
+  sseClients.add(client);
+  return () => sseClients.delete(client);
+}
+
+function notifySSEClients(result: ScheduledTaskResult): void {
+  console.log(`[SSE] Notifying ${sseClients.size} clients`);
+  for (const client of sseClients) {
+    client(result);
+  }
+}
+
+// Register agent executor with the MCPE client
+const mcpe = getMCPEInstance();
+mcpe.registerAgentExecutor(async (task, config) => {
+  console.log(`[AgentExecutor] Processing: ${task}`);
+
+  const result = await generateText({
+    model: openai(config.model || 'gpt-4o-mini'),
+    system: config.systemPrompt || 'You are a helpful assistant.',
+    prompt: config.instructions ? `${config.instructions}\n\n${task}` : task,
+    maxTokens: config.maxTokens || 500,
+  });
+
+  return result.text;
 });
 
 const SYSTEM_PROMPT = `You are an intelligent event subscription agent for the MCPE (MCP Events) protocol.
@@ -48,6 +80,28 @@ When users ask for reminders, digests, summaries, or time-based delivery, use th
 - "remind me in X hours" → use subscribeScheduled with calculated datetime
 - "every Monday" → use subscribeCron with "0 9 * * 1"
 - Real-time notifications → use regular subscribe
+
+DELAYED RESPONSES:
+When users ask you to answer something "in X minutes", "after a delay", "later", etc., use the scheduleDelayedResponse tool:
+- "answer this in 1 minute" → scheduleDelayedResponse with delayMinutes: 1
+- "remind me in 5 minutes about X" → scheduleDelayedResponse with delayMinutes: 5
+- "respond after 2 minutes with Y" → scheduleDelayedResponse with delayMinutes: 2
+
+The delayed response will be processed by an AI agent at the scheduled time and the response will appear in the chat.
+
+CONFIGURED SUBSCRIPTIONS (mcpe.json):
+The server has pre-configured subscriptions defined in mcpe.json. These persist across server restarts.
+
+Tools for managing configured subscriptions:
+- getConfiguredSubscriptions: See all subscriptions in mcpe.json (name, handler type, filter, enabled status)
+- toggleSubscription: Enable or disable a specific subscription by name
+- disableAllSubscriptions: Disable all subscriptions at once
+
+When a user asks:
+- "what subscriptions do I have?" → use getConfiguredSubscriptions
+- "disable error-analyzer" → use toggleSubscription with enabled=false
+- "enable daily-briefing" → use toggleSubscription with enabled=true
+- "unsubscribe from all" or "disable all" → use disableAllSubscriptions
 
 Be helpful and provide clear explanations of what you're subscribing to.`;
 
@@ -239,8 +293,49 @@ export async function runAgent(request: AgentRequest): Promise<AgentResponse> {
           },
         }),
 
+        scheduleDelayedResponse: tool({
+          description: 'Schedule a delayed AI response. Use when user asks you to answer something "in X minutes", "after Y minutes", or wants a delayed response. The AI will process the task at the scheduled time and send the response to ntfy.sh.',
+          parameters: z.object({
+            task: z.string()
+              .describe('The task or question the AI should answer when the delay expires'),
+            delayMinutes: z.number().min(0.1).max(60)
+              .describe('Delay in minutes before the AI responds (0.1 to 60 minutes, i.e., 6 seconds to 60 minutes)'),
+            instructions: z.string().optional()
+              .describe('Additional instructions for how to answer (optional)'),
+          }),
+          execute: async ({ task, delayMinutes, instructions }) => {
+            const delayMs = delayMinutes * 60 * 1000;
+
+            // Schedule agent task - the registered agent executor will process it
+            const result = mcpe.scheduleAgentTask({
+              task,
+              delayMs,
+              handler: {
+                type: 'agent',
+                model: 'gpt-4o-mini',
+                systemPrompt: 'You are a helpful AI assistant. The user asked you to respond after a delay. Now it is time to answer their question. Be helpful, concise, and provide a complete answer.',
+                instructions,
+                maxTokens: 500,
+              },
+              onComplete: (taskResult) => {
+                console.log(`[Delayed Response] Completed: ${taskResult.response.substring(0, 100)}...`);
+                // Notify all SSE clients
+                notifySSEClients(taskResult);
+              },
+            });
+
+            return {
+              success: true,
+              taskId: result.taskId,
+              scheduledFor: result.scheduledFor.toISOString(),
+              delayMinutes,
+              message: `Scheduled AI response for "${task}" in ${delayMinutes} minute(s). The response will appear in the chat.`,
+            };
+          },
+        }),
+
         listSubscriptions: tool({
-          description: 'List all current active subscriptions',
+          description: 'List all current active runtime subscriptions (created during this session)',
           parameters: z.object({}),
           execute: async () => {
             const subscriptions = await mcpe.listSubscriptions();
@@ -257,8 +352,68 @@ export async function runAgent(request: AgentRequest): Promise<AgentResponse> {
           },
         }),
 
+        getConfiguredSubscriptions: tool({
+          description: 'Get all subscriptions configured in mcpe.json. Use this to see what event handlers are set up (agent, bash, webhook handlers). These are the persistent subscriptions that survive server restarts.',
+          parameters: z.object({}),
+          execute: async () => {
+            const data = getSubscriptionsJSON();
+            return {
+              configPath: data.configPath,
+              count: data.subscriptions.length,
+              enabledCount: data.subscriptions.filter(s => s.enabled).length,
+              subscriptions: data.subscriptions,
+              summary: formatSubscriptionsForDisplay(),
+            };
+          },
+        }),
+
+        toggleSubscription: tool({
+          description: 'Enable or disable a configured subscription from mcpe.json. Use this when user wants to turn on/off a subscription.',
+          parameters: z.object({
+            name: z.string().describe('The name of the subscription to toggle (e.g., "delayed-response", "error-analyzer")'),
+            enabled: z.boolean().describe('True to enable, false to disable'),
+          }),
+          execute: async ({ name, enabled }) => {
+            const success = setSubscriptionEnabled(name, enabled);
+            if (success) {
+              const data = getSubscriptionsJSON();
+              return {
+                success: true,
+                message: `Subscription "${name}" is now ${enabled ? 'enabled' : 'disabled'}`,
+                subscriptions: data.subscriptions,
+              };
+            } else {
+              return {
+                success: false,
+                message: `Subscription "${name}" not found in mcpe.json`,
+              };
+            }
+          },
+        }),
+
+        disableAllSubscriptions: tool({
+          description: 'Disable all configured subscriptions. Use when user says "unsubscribe from all" or "disable all subscriptions".',
+          parameters: z.object({}),
+          execute: async () => {
+            const data = getSubscriptionsJSON();
+            let disabledCount = 0;
+            for (const sub of data.subscriptions) {
+              if (sub.enabled) {
+                setSubscriptionEnabled(sub.name, false);
+                disabledCount++;
+              }
+            }
+            return {
+              success: true,
+              disabledCount,
+              message: `Disabled ${disabledCount} subscription(s)`,
+              subscriptions: getSubscriptionsJSON().subscriptions,
+            };
+          },
+        }),
+
         unsubscribe: tool({
-          description: 'Remove a subscription by its ID',
+          description: 'Remove a runtime subscription by its ID (for subscriptions created during this session, not mcpe.json ones)',
           parameters: z.object({
             subscriptionId: z.string().describe('The ID of the subscription to remove'),
           }),

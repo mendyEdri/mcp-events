@@ -1,8 +1,60 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { z } from 'zod';
-import { runAgent } from './agent.js';
+import { readFileSync, writeFileSync, existsSync } from 'fs';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
+import { runAgent, addSSEClient } from './agent.js';
 import { getMCPEInstance } from './mcpe-integration.js';
+
+// ES module __dirname equivalent
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+// Messages storage
+interface ChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: string;
+}
+
+const MESSAGES_FILE = join(__dirname, '..', 'messages.json');
+
+function loadMessages(): ChatMessage[] {
+  try {
+    if (existsSync(MESSAGES_FILE)) {
+      const content = readFileSync(MESSAGES_FILE, 'utf-8');
+      return JSON.parse(content);
+    }
+  } catch (error) {
+    console.error('[Messages] Failed to load:', error);
+  }
+  return [];
+}
+
+function saveMessages(messages: ChatMessage[]): void {
+  try {
+    writeFileSync(MESSAGES_FILE, JSON.stringify(messages, null, 2));
+  } catch (error) {
+    console.error('[Messages] Failed to save:', error);
+  }
+}
+
+function addMessage(role: 'user' | 'assistant', content: string): ChatMessage {
+  const messages = loadMessages();
+  const message: ChatMessage = {
+    role,
+    content,
+    timestamp: new Date().toISOString(),
+  };
+  messages.push(message);
+  saveMessages(messages);
+  return message;
+}
+
+function clearMessages(): void {
+  saveMessages([]);
+}
 import {
   getAllTools,
   setToolEnabled,
@@ -25,6 +77,7 @@ import {
   getDemoInfo,
 } from './events-demo.js';
 import { createEvent } from '@mcpe/core';
+import { getSubscriptionsJSON, getConfigPath, setSubscriptionEnabled } from './mcpe-config.js';
 
 // Request validation schemas
 const RegisterRequestSchema = z.object({
@@ -131,7 +184,8 @@ const HTML_CONTENT = `<!DOCTYPE html>
     <div class="sidebar-header">MCPE Agent Configuration</div>
     <div class="sidebar-tabs">
       <button class="sidebar-tab active" data-panel="tools">Tools</button>
-      <button class="sidebar-tab" data-panel="mcp">MCP Servers</button>
+      <button class="sidebar-tab" data-panel="mcp">MCP</button>
+      <button class="sidebar-tab" data-panel="subs">Subs</button>
     </div>
     <div class="sidebar-content">
       <div id="tools-panel" class="panel active">
@@ -171,24 +225,27 @@ const HTML_CONTENT = `<!DOCTYPE html>
           <button class="btn btn-secondary" onclick="showImportModal()" style="width: 100%;">Import/Export Config</button>
         </div>
       </div>
+      <div id="subs-panel" class="panel">
+        <div id="subs-list"></div>
+        <div style="margin-top: 16px; padding: 12px; background: #1a1a2e; border-radius: 8px; border: 1px dashed #0f3460;">
+          <p style="font-size: 12px; color: #888; margin-bottom: 8px;">Subscriptions are defined in mcpe.json</p>
+          <p id="config-path" style="font-size: 11px; color: #666; font-family: monospace;"></p>
+        </div>
+      </div>
     </div>
   </aside>
   <main class="main">
     <header class="chat-header">
       <h1>MCPE Agent Chat</h1>
-      <div class="connection-status">
-        <span class="status-dot" id="status-dot"></span>
-        <span id="status-text">Disconnected</span>
+      <div style="display: flex; align-items: center; gap: 16px;">
+        <button class="btn btn-danger btn-sm" onclick="clearChat()" title="Clear chat history">Clear</button>
+        <div class="connection-status">
+          <span class="status-dot" id="status-dot"></span>
+          <span id="status-text">Disconnected</span>
+        </div>
       </div>
     </header>
-    <div class="chat-messages" id="chat-messages">
-      <div class="message assistant">
-        <div class="message-content">Hello! I'm the MCPE Agent. I can help you subscribe to events from various sources like GitHub, Gmail, and Slack.
-
-Try asking me to "subscribe to GitHub push events" or "list my subscriptions".</div>
-        <div class="message-meta">Agent</div>
-      </div>
-    </div>
+    <div class="chat-messages" id="chat-messages"></div>
     <div class="chat-input-container">
       <div class="chat-input-wrapper">
         <textarea class="chat-input" id="chat-input" placeholder="Type your message..." rows="1" onkeydown="handleKeyDown(event)"></textarea>
@@ -339,12 +396,83 @@ Try asking me to "subscribe to GitHub push events" or "list my subscriptions".</
       container.scrollTop = container.scrollHeight;
     }
     function escapeHtml(text) { const div = document.createElement('div'); div.textContent = text; return div.innerHTML; }
+    async function loadSubscriptions() {
+      try {
+        const res = await fetch(API_BASE + '/api/mcpe/subscriptions');
+        const data = await res.json();
+        renderSubscriptions(data.subscriptions);
+        if (data.configPath) {
+          document.getElementById('config-path').textContent = data.configPath;
+        }
+      } catch (err) { console.error('Failed to load subscriptions:', err); }
+    }
+    function renderSubscriptions(subs) {
+      const container = document.getElementById('subs-list');
+      if (!subs || subs.length === 0) {
+        container.innerHTML = '<p style="color: #666; font-size: 13px; text-align: center; padding: 20px;">No subscriptions in mcpe.json</p>';
+        return;
+      }
+      container.innerHTML = subs.map(sub => {
+        const filters = sub.filter.eventTypes ? sub.filter.eventTypes.join(', ') : (sub.filter.sources ? sub.filter.sources.join(', ') : 'all');
+        const cronInfo = sub.delivery && sub.delivery.cronExpression ? '<div style="font-size: 11px; color: #888; margin-top: 4px;">Cron: ' + sub.delivery.cronExpression + '</div>' : '';
+        return '<div class="mcp-item"><div class="mcp-header"><span class="mcp-name">' + sub.name + '</span><label class="toggle"><input type="checkbox" ' + (sub.enabled ? 'checked' : '') + ' onchange="toggleSubscription(\\'' + sub.name + '\\', this.checked)"><span class="toggle-slider"></span></label></div><div class="mcp-command" style="color: #e94560;">' + sub.handlerType + '</div><div style="font-size: 12px; color: #888; margin-top: 4px;">Filter: ' + filters + '</div>' + cronInfo + (sub.description ? '<div style="font-size: 11px; color: #666; margin-top: 8px; font-style: italic;">' + sub.description + '</div>' : '') + '</div>';
+      }).join('');
+    }
+    async function toggleSubscription(name, enabled) {
+      try {
+        await fetch(API_BASE + '/api/mcpe/subscriptions/' + encodeURIComponent(name) + '/toggle', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ enabled })
+        });
+        loadSubscriptions();
+      } catch (err) { console.error('Failed to toggle subscription:', err); loadSubscriptions(); }
+    }
+    async function loadMessages() {
+      try {
+        const res = await fetch(API_BASE + '/api/messages');
+        const data = await res.json();
+        const container = document.getElementById('chat-messages');
+        container.innerHTML = '';
+        if (data.messages && data.messages.length > 0) {
+          data.messages.forEach(msg => {
+            const time = new Date(msg.timestamp).toLocaleTimeString();
+            const div = document.createElement('div');
+            div.className = 'message ' + msg.role;
+            div.innerHTML = '<div class="message-content">' + escapeHtml(msg.content) + '</div><div class="message-meta">' + (msg.role === 'user' ? 'You' : 'Agent') + ' · ' + time + '</div>';
+            container.appendChild(div);
+          });
+          container.scrollTop = container.scrollHeight;
+        }
+      } catch (err) { console.error('Failed to load messages:', err); }
+    }
+    async function clearChat() {
+      if (!confirm('Clear all chat history?')) return;
+      try {
+        await fetch(API_BASE + '/api/messages', { method: 'DELETE' });
+        document.getElementById('chat-messages').innerHTML = '';
+      } catch (err) { console.error('Failed to clear messages:', err); }
+    }
     const textarea = document.getElementById('chat-input');
     textarea.addEventListener('input', function() { this.style.height = 'auto'; this.style.height = Math.min(this.scrollHeight, 120) + 'px'; });
-    loadTools(); loadMCPServers(); loadStatus(); setInterval(loadStatus, 30000);
+    loadTools(); loadMCPServers(); loadSubscriptions(); loadMessages(); loadStatus(); setInterval(loadStatus, 30000);
+    // SSE for delayed responses
+    const evtSource = new EventSource(API_BASE + '/chat/events');
+    evtSource.onmessage = function(event) {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.type === 'response') {
+          addMessage('[Delayed Response]\\n\\n' + data.response, 'assistant');
+        }
+      } catch (err) { /* ignore */ }
+    };
+    evtSource.onerror = function() { console.log('SSE reconnecting...'); };
   </script>
 </body>
 </html>`;
+
+// Get Fly.io machine ID for sticky sessions
+const FLY_MACHINE_ID = process.env.FLY_ALLOC_ID || process.env.FLY_MACHINE_ID || '';
 
 // Create Hono app
 export function createApp(): Hono {
@@ -352,6 +480,15 @@ export function createApp(): Hono {
 
   // Enable CORS
   app.use('*', cors());
+
+  // Sticky sessions middleware - ensures same user hits same machine
+  // This is critical for SSE + scheduled tasks to work correctly
+  app.use('*', async (c, next) => {
+    await next();
+    if (FLY_MACHINE_ID && !c.res.headers.get('Set-Cookie')?.includes('fly-force-instance-id')) {
+      c.header('Set-Cookie', `fly-force-instance-id=${FLY_MACHINE_ID}; Path=/; HttpOnly; SameSite=Lax; Max-Age=86400`);
+    }
+  });
 
   // Serve the UI at root
   app.get('/', (c) => {
@@ -367,6 +504,64 @@ export function createApp(): Hono {
       connectionUrl: mcpe.getConnectionUrl(),
       timestamp: new Date().toISOString(),
     });
+  });
+
+  // SSE endpoint for delayed responses
+  app.get('/chat/events', (c) => {
+    return c.newResponse(
+      new ReadableStream({
+        start(controller) {
+          const encoder = new TextEncoder();
+
+          // Send initial connection message
+          controller.enqueue(encoder.encode('data: {"type":"connected"}\n\n'));
+
+          // Register SSE client
+          const unsubscribe = addSSEClient((result) => {
+            try {
+              const data = JSON.stringify({ type: 'response', ...result });
+              controller.enqueue(encoder.encode(`data: ${data}\n\n`));
+              console.log('[SSE] Sent response to client');
+            } catch (err) {
+              console.error('[SSE] Failed to send:', err);
+            }
+          });
+          console.log('[SSE] Client connected');
+
+          // Keep connection alive with heartbeat
+          const heartbeat = setInterval(() => {
+            controller.enqueue(encoder.encode(': heartbeat\n\n'));
+          }, 30000);
+
+          // Cleanup on close
+          c.req.raw.signal.addEventListener('abort', () => {
+            unsubscribe();
+            clearInterval(heartbeat);
+          });
+        },
+      }),
+      {
+        headers: {
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+          'Connection': 'keep-alive',
+        },
+      }
+    );
+  });
+
+  // ============ Messages API ============
+
+  // Get all messages
+  app.get('/api/messages', (c) => {
+    const messages = loadMessages();
+    return c.json({ messages });
+  });
+
+  // Clear all messages
+  app.delete('/api/messages', (c) => {
+    clearMessages();
+    return c.json({ success: true });
   });
 
   // ============ Tools API ============
@@ -417,6 +612,37 @@ export function createApp(): Hono {
     const name = c.req.param('name');
     const success = removeCustomTool(name);
     return c.json({ success });
+  });
+
+  // ============ MCPE Subscriptions API ============
+
+  // Get mcpe.json subscriptions
+  app.get('/api/mcpe/subscriptions', (c) => {
+    const data = getSubscriptionsJSON();
+    return c.json(data);
+  });
+
+  // Get mcpe.json config path
+  app.get('/api/mcpe/config-path', (c) => {
+    return c.json({ path: getConfigPath() });
+  });
+
+  // Toggle subscription enabled state
+  app.post('/api/mcpe/subscriptions/:name/toggle', async (c) => {
+    try {
+      const name = c.req.param('name');
+      const body = await c.req.json();
+      const { enabled } = body as { enabled?: boolean };
+
+      if (typeof enabled !== 'boolean') {
+        return c.json({ success: false, error: 'Enabled must be a boolean' }, 400);
+      }
+
+      const success = setSubscriptionEnabled(name, enabled);
+      return c.json({ success, name, enabled });
+    } catch (error) {
+      return c.json({ success: false, error: String(error) }, 500);
+    }
   });
 
   // ============ MCP Servers API ============
@@ -647,10 +873,16 @@ export function createApp(): Hono {
         );
       }
 
+      // Save user message
+      addMessage('user', message);
+
       const result = await runAgent({
         userMessage: message,
         mcpeUrl,
       });
+
+      // Save assistant response
+      addMessage('assistant', result.message);
 
       return c.json({
         success: result.success,

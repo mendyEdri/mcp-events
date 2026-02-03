@@ -44,6 +44,7 @@ COPY --from=builder /app/packages/mcpe/dist ./packages/mcpe/dist
 
 COPY --from=builder /app/packages/agent-server/package.json ./packages/agent-server/package.json
 COPY --from=builder /app/packages/agent-server/dist ./packages/agent-server/dist
+COPY --from=builder /app/packages/agent-server/mcpe.json ./packages/agent-server/mcpe.json
 
 # Install production dependencies only
 RUN pnpm install --prod

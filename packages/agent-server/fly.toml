@@ -1,5 +1,8 @@
 # fly.toml app configuration file
 # See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+# IMPORTANT: This app uses in-memory state for SSE clients and scheduled tasks.
+# Run with a single machine only: fly scale count 1 -a mcpe-agent-server
 
 app = "mcpe-agent-server"
 primary_region = "iad"

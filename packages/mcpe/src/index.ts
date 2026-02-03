@@ -92,6 +92,15 @@ export {
   type SubscriptionsFile,
   type SubscriptionStoreOptions,
 } from './client/index.js';
+export {
+  ClientScheduler,
+  type LocalCronConfig,
+  type LocalTimerConfig,
+  type LocalBatchHandler,
+  type AgentExecutor,
+  type ScheduledTaskResult,
+  type TaskCompleteCallback,
+} from './client/index.js';
 
 // Utils
 export { matchesPattern, matchesAnyPattern } from './utils/index.js';

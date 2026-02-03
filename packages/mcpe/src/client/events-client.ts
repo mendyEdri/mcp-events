@@ -9,6 +9,7 @@ import {
   MCPE_TOOLS,
 } from '../types/index.js';
 import { matchesPattern } from '../utils/matching.js';
+import { ClientScheduler, type LocalCronConfig, type LocalTimerConfig, type LocalBatchHandler } from './client-scheduler.js';
 
 /**
  * Event handler function type
@@ -90,10 +91,12 @@ export interface ListSubscriptionsResult {
  */
 export class EventsClient {
   readonly mcpClient: Client;
+  readonly scheduler: ClientScheduler;
   private eventHandlers: Map<string, EventCallback[]> = new Map();
   private batchHandlers: BatchEventCallback[] = [];
   private subscriptionExpiredHandlers: SubscriptionExpiredCallback[] = [];
   private _supportsEvents: boolean = false;
+  private scheduledSubscriptions: Map<string, string> = new Map(); // subscriptionId -> pattern for routing
 
   constructor(config: EventsClientConfig);
   constructor(mcpClient: Client);
@@ -107,6 +110,7 @@ export class EventsClient {
       );
     }
 
+    this.scheduler = new ClientScheduler();
     this.setupNotificationHandlers();
   }
 
@@ -374,5 +378,199 @@ export class EventsClient {
     this.eventHandlers.clear();
     this.batchHandlers = [];
     this.subscriptionExpiredHandlers = [];
+  }
+
+  // ============ Local Scheduling Methods ============
+
+  /**
+   * Subscribe with local cron scheduling
+   *
+   * Events are received in realtime but buffered locally.
+   * The handler is called on the cron schedule with all buffered events.
+   *
+   * @example
+   * ```typescript
+   * // Daily digest at 9am
+   * await client.subscribeWithLocalCron(
+   *   { sources: ['github'] },
+   *   { expression: '0 9 * * *', timezone: 'America/New_York' },
+   *   (events) => {
+   *     console.log('Daily GitHub digest:', events);
+   *   }
+   * );
+   * ```
+   */
+  async subscribeWithLocalCron(
+    filter: EventFilter,
+    cronConfig: LocalCronConfig,
+    handler: LocalBatchHandler
+  ): Promise<SubscribeResult> {
+    // Subscribe with realtime delivery (events come immediately)
+    const result = await this.subscribe({
+      filter,
+      delivery: { channels: ['realtime'] },
+    });
+
+    // Set up local cron scheduling
+    this.scheduler.startCron(result.subscriptionId, cronConfig, handler);
+
+    // Track this subscription for routing events to the scheduler
+    this.scheduledSubscriptions.set(result.subscriptionId, '*');
+
+    // Set up event routing to the scheduler
+    this.onEvent('*', (event, subscriptionId) => {
+      if (subscriptionId === result.subscriptionId && this.scheduler.hasJob(subscriptionId)) {
+        this.scheduler.queueEvent(subscriptionId, event);
+      }
+    });
+
+    return result;
+  }
+
+  /**
+   * Subscribe with local timer (one-time delayed processing)
+   *
+   * Events are received in realtime but buffered locally.
+   * The handler is called once after the delay with all buffered events.
+   *
+   * @example
+   * ```typescript
+   * // Process events after 5 minutes
+   * await client.subscribeWithLocalTimer(
+   *   { eventTypes: ['task.created'] },
+   *   { delayMs: 5 * 60 * 1000 },
+   *   (events) => {
+   *     console.log('Processing tasks after delay:', events);
+   *   }
+   * );
+   * ```
+   */
+  async subscribeWithLocalTimer(
+    filter: EventFilter,
+    timerConfig: LocalTimerConfig,
+    handler: LocalBatchHandler
+  ): Promise<SubscribeResult> {
+    // Subscribe with realtime delivery (events come immediately)
+    const result = await this.subscribe({
+      filter,
+      delivery: { channels: ['realtime'] },
+    });
+
+    // Set up local timer
+    this.scheduler.startTimer(result.subscriptionId, timerConfig, handler);
+
+    // Track this subscription for routing events to the scheduler
+    this.scheduledSubscriptions.set(result.subscriptionId, '*');
+
+    // Set up event routing to the scheduler
+    this.onEvent('*', (event, subscriptionId) => {
+      if (subscriptionId === result.subscriptionId && this.scheduler.hasJob(subscriptionId)) {
+        this.scheduler.queueEvent(subscriptionId, event);
+      }
+    });
+
+    return result;
+  }
+
+  /**
+   * Schedule a delayed response (convenience method)
+   *
+   * Creates a subscription, immediately queues an event, and calls the handler after delay.
+   * Useful for "remind me in X minutes" type requests.
+   *
+   * @example
+   * ```typescript
+   * await client.scheduleDelayedTask(
+   *   'What are 3 facts about octopuses?',
+   *   60000, // 1 minute
+   *   async (task) => {
+   *     const response = await callAI(task);
+   *     await sendToNtfy(response);
+   *   }
+   * );
+   * ```
+   */
+  async scheduleDelayedTask(
+    task: string,
+    delayMs: number,
+    handler: (task: string, metadata: { scheduledAt: Date; deliveredAt: Date }) => void | Promise<void>
+  ): Promise<{ subscriptionId: string; scheduledFor: Date }> {
+    const scheduledAt = new Date();
+    const deliverAt = new Date(Date.now() + delayMs);
+    const eventType = `delayed.task.${Date.now()}`;
+
+    // Subscribe to this specific event type
+    const result = await this.subscribe({
+      filter: { eventTypes: [eventType] },
+      delivery: { channels: ['realtime'] },
+    });
+
+    // Set up timer to call handler
+    this.scheduler.startTimer(result.subscriptionId, { delayMs }, async (events) => {
+      // Extract the task from the queued event
+      const event = events[0];
+      if (event) {
+        await handler(event.data.task as string, {
+          scheduledAt,
+          deliveredAt: new Date(),
+        });
+      }
+      // Clean up subscription after delivery
+      try {
+        await this.unsubscribe(result.subscriptionId);
+      } catch {
+        // Ignore cleanup errors
+      }
+    });
+
+    // Queue the task event immediately
+    this.scheduler.queueEvent(result.subscriptionId, {
+      id: `task-${Date.now()}`,
+      type: eventType,
+      data: { task },
+      metadata: {
+        source: 'custom',
+        priority: 'normal',
+        timestamp: scheduledAt.toISOString(),
+        tags: ['delayed-task'],
+      },
+    });
+
+    return {
+      subscriptionId: result.subscriptionId,
+      scheduledFor: deliverAt,
+    };
+  }
+
+  /**
+   * Get local scheduler info
+   */
+  getSchedulerInfo(): {
+    activeJobs: Array<{
+      subscriptionId: string;
+      type: 'cron' | 'timer';
+      nextRun?: Date;
+      pendingEvents: number;
+    }>;
+  } {
+    return {
+      activeJobs: this.scheduler.getActiveJobs(),
+    };
+  }
+
+  /**
+   * Stop local scheduler for a subscription
+   */
+  stopLocalScheduler(subscriptionId: string): void {
+    this.scheduler.stop(subscriptionId);
+    this.scheduledSubscriptions.delete(subscriptionId);
+  }
+
+  /**
+   * Stop all local schedulers
+   */
+  stopAllLocalSchedulers(): void {
+    this.scheduler.stopAll();
+    this.scheduledSubscriptions.clear();
   }
 }

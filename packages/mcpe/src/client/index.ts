@@ -14,3 +14,13 @@ export {
   type SubscriptionsFile,
   type SubscriptionStoreOptions,
 } from './subscription-store.js';
+
+export {
+  ClientScheduler,
+  type LocalCronConfig,
+  type LocalTimerConfig,
+  type LocalBatchHandler,
+  type AgentExecutor,
+  type ScheduledTaskResult,
+  type TaskCompleteCallback,
+} from './client-scheduler.js';
