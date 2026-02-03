@@ -672,15 +672,197 @@ export function createApp(): Hono {
 
   // ============ Events Demo API ============
 
-  // Get demo info
+  // Demo UI page
   app.get('/demo', (c) => {
+    const info = getDemoInfo();
+
+    // Generate subscriptions HTML
+    const subscriptionsHtml = info.subscriptions.map(s => {
+      const name = s.filter.eventTypes ? s.filter.eventTypes.join(', ') : s.filter.sources?.join(', ') || 'All events';
+      const agentConfig = s.handlerType === 'agent' && s.handlerConfig
+        ? `<div class="sub-config"><strong>Agent Config:</strong><br>Model: ${s.handlerConfig.model || 'gpt-4o-mini'}<br>Prompt: "${s.handlerConfig.systemPrompt}"</div>`
+        : '';
+      return `<div class="subscription">
+        <div class="sub-header">
+          <span class="sub-name">${name}</span>
+          <span class="sub-type ${s.handlerType}">${s.handlerType}</span>
+        </div>
+        <div class="sub-filter">filter: ${JSON.stringify(s.filter)}</div>
+        ${agentConfig}
+      </div>`;
+    }).join('');
+
+    const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MCPE Demo - Event Handlers</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); color: #eee; min-height: 100vh; padding: 24px; }
+    .container { max-width: 900px; margin: 0 auto; }
+    h1 { font-size: 28px; margin-bottom: 8px; color: #fff; }
+    .subtitle { color: #888; margin-bottom: 32px; font-size: 16px; }
+    .ntfy-banner { background: linear-gradient(135deg, #e94560 0%, #ff6b6b 100%); border-radius: 12px; padding: 20px 24px; margin-bottom: 32px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; }
+    .ntfy-banner h2 { font-size: 18px; margin-bottom: 4px; }
+    .ntfy-banner p { font-size: 14px; opacity: 0.9; }
+    .ntfy-banner a { background: rgba(255,255,255,0.2); color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600; transition: background 0.2s; }
+    .ntfy-banner a:hover { background: rgba(255,255,255,0.3); }
+    .section { background: #16213e; border-radius: 12px; padding: 24px; margin-bottom: 24px; border: 1px solid #0f3460; }
+    .section h3 { font-size: 16px; color: #e94560; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+    .subscription { background: #1a1a2e; border-radius: 8px; padding: 16px; margin-bottom: 12px; border: 1px solid #0f3460; }
+    .subscription:last-child { margin-bottom: 0; }
+    .sub-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+    .sub-name { font-weight: 600; font-size: 15px; }
+    .sub-type { font-size: 12px; padding: 4px 10px; border-radius: 20px; font-weight: 500; }
+    .sub-type.webhook { background: rgba(0, 200, 83, 0.2); color: #00c853; }
+    .sub-type.agent { background: rgba(233, 69, 96, 0.2); color: #e94560; }
+    .sub-filter { font-size: 13px; color: #888; margin-bottom: 12px; font-family: monospace; background: rgba(0,0,0,0.2); padding: 8px 12px; border-radius: 6px; }
+    .sub-config { font-size: 13px; color: #aaa; padding: 12px; background: rgba(233, 69, 96, 0.1); border-radius: 6px; border-left: 3px solid #e94560; margin-top: 8px; }
+    .sub-config strong { color: #e94560; }
+    .trigger-section { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-top: 24px; }
+    .trigger-btn { padding: 16px 20px; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; transition: all 0.2s; text-align: left; }
+    .trigger-btn .emoji { font-size: 24px; margin-bottom: 8px; display: block; }
+    .trigger-btn .label { display: block; margin-bottom: 4px; }
+    .trigger-btn .desc { font-size: 12px; font-weight: 400; opacity: 0.8; }
+    .trigger-btn.github { background: #238636; color: white; }
+    .trigger-btn.github:hover { background: #2ea043; }
+    .trigger-btn.slack { background: #4A154B; color: white; }
+    .trigger-btn.slack:hover { background: #611f69; }
+    .trigger-btn.error { background: #d93025; color: white; }
+    .trigger-btn.error:hover { background: #ea4335; }
+    .trigger-btn.analyze { background: #1a73e8; color: white; }
+    .trigger-btn.analyze:hover { background: #4285f4; }
+    .trigger-btn.alert { background: #f9ab00; color: #1a1a2e; }
+    .trigger-btn.alert:hover { background: #ffc107; }
+    .result { margin-top: 16px; padding: 16px; background: #1a1a2e; border-radius: 8px; font-family: monospace; font-size: 13px; display: none; white-space: pre-wrap; word-break: break-all; }
+    .result.show { display: block; }
+    .result.success { border-left: 3px solid #00c853; }
+    .result.error { border-left: 3px solid #d93025; }
+    .mcpe-config { background: #0d1117; border-radius: 8px; padding: 16px; font-family: monospace; font-size: 12px; overflow-x: auto; color: #c9d1d9; white-space: pre; }
+    .footer { text-align: center; margin-top: 32px; padding-top: 24px; border-top: 1px solid #0f3460; color: #666; font-size: 13px; }
+    .footer a { color: #e94560; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>MCPE Events Demo</h1>
+    <p class="subtitle">MCP Events with webhook and AI agent handlers</p>
+
+    <div class="ntfy-banner">
+      <div>
+        <h2>Watch Events Live</h2>
+        <p>Open ntfy.sh to see events and agent responses in real-time</p>
+      </div>
+      <a href="https://ntfy.sh/${info.ntfyTopic}" target="_blank">Open ntfy.sh/${info.ntfyTopic}</a>
+    </div>
+
+    <div class="section">
+      <h3>Trigger Events</h3>
+      <p style="color: #888; font-size: 14px; margin-bottom: 16px;">Click a button to publish an event. Watch the results appear in ntfy.sh!</p>
+      <div class="trigger-section">
+        <button class="trigger-btn github" onclick="trigger('github')">
+          <span class="emoji">GitHub</span>
+          <span class="label">GitHub Push</span>
+          <span class="desc">Sends to webhook handler</span>
+        </button>
+        <button class="trigger-btn slack" onclick="trigger('slack')">
+          <span class="emoji">Slack</span>
+          <span class="label">Slack Message</span>
+          <span class="desc">Sends to webhook handler</span>
+        </button>
+        <button class="trigger-btn error" onclick="trigger('error')">
+          <span class="emoji">AI</span>
+          <span class="label">Error Event</span>
+          <span class="desc">AI agent analyzes the error</span>
+        </button>
+        <button class="trigger-btn analyze" onclick="trigger('analyze')">
+          <span class="emoji">Data</span>
+          <span class="label">Analyze Data</span>
+          <span class="desc">AI agent extracts insights</span>
+        </button>
+        <button class="trigger-btn alert" onclick="trigger('alert')">
+          <span class="emoji">Alert</span>
+          <span class="label">High Priority Alert</span>
+          <span class="desc">Urgent notification</span>
+        </button>
+      </div>
+      <div id="result" class="result"></div>
+    </div>
+
+    <div class="section">
+      <h3>Registered Subscriptions (mcpe.json)</h3>
+      ${subscriptionsHtml}
+    </div>
+
+    <div class="section">
+      <h3>Example mcpe.json Configuration</h3>
+      <div class="mcpe-config">{
+  "version": "1.0",
+  "subscriptions": [
+    {
+      "name": "error-analyzer",
+      "filter": { "eventTypes": ["error.*", "*.failed"] },
+      "handler": {
+        "type": "agent",
+        "model": "gpt-4o-mini",
+        "systemPrompt": "Analyze this error and suggest fixes...",
+        "maxTokens": 300
+      }
+    },
+    {
+      "name": "slack-to-ntfy",
+      "filter": { "sources": ["slack"] },
+      "handler": {
+        "type": "webhook",
+        "url": "https://ntfy.sh/my-topic"
+      }
+    }
+  ]
+}</div>
+    </div>
+
+    <div class="footer">
+      <p>MCPE - MCP Events Extension | <a href="https://github.com/mendyEdri/mcp-events">GitHub</a></p>
+    </div>
+  </div>
+
+  <script>
+    async function trigger(type) {
+      const result = document.getElementById('result');
+      result.className = 'result show';
+      result.textContent = 'Publishing event...';
+
+      try {
+        const res = await fetch('/publish/' + type, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+        const data = await res.json();
+        result.className = 'result show ' + (data.success ? 'success' : 'error');
+        result.textContent = JSON.stringify(data, null, 2);
+
+        if (data.success && (type === 'error' || type === 'analyze')) {
+          result.textContent += '\\n\\nAgent is processing... Check ntfy.sh for the AI response!';
+        }
+      } catch (err) {
+        result.className = 'result show error';
+        result.textContent = 'Error: ' + err.message;
+      }
+    }
+  </script>
+</body>
+</html>`;
+    return c.html(html);
+  });
+
+  // Get demo info as JSON
+  app.get('/demo/info', (c) => {
     const info = getDemoInfo();
     return c.json({
       success: true,
       ...info,
       usage: {
         publish: 'POST /publish with { type, source, data, priority? }',
-        quickPublish: 'POST /publish/github, /publish/slack, /publish/alert',
+        quickPublish: 'POST /publish/github, /publish/slack, /publish/alert, /publish/error, /publish/analyze',
         subscribe: `Open ${info.subscribeUrl} in browser or run: curl -s ${info.ntfyUrl}/json`,
       },
     });
