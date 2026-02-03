@@ -1,11 +1,76 @@
-import { EventsServer, createEvent, type MCPEvent } from '@mcpe/core';
+import { EventsServer, createEvent, type MCPEvent, type AgentEventHandler } from '@mcpe/core';
+import { generateText } from 'ai';
+import { createOpenAI } from '@ai-sdk/openai';
 
 // Default ntfy.sh topic for demos
 const NTFY_TOPIC = process.env.NTFY_TOPIC || 'mcpe-demo';
 const NTFY_URL = `https://ntfy.sh/${NTFY_TOPIC}`;
 
+// OpenAI client for agent handlers
+const openai = createOpenAI({
+  baseURL: process.env.OPENAI_BASE_URL ?? 'https://www.wixapis.com/openai/v1',
+  apiKey: process.env.OPENAI_API_KEY,
+});
+
 // In-memory events server for demo
 let eventsServer: EventsServer | null = null;
+
+/**
+ * Agent handler callback - invokes OpenAI and sends result to ntfy.sh
+ */
+async function handleAgentEvent(
+  event: MCPEvent,
+  handler: AgentEventHandler,
+  _subscriptionId: string
+): Promise<void> {
+  const model = handler.model || 'gpt-4o-mini';
+
+  // Build the prompt from handler config
+  const systemPrompt = handler.systemPrompt || 'You are a helpful assistant that processes events.';
+  const instructions = handler.instructions || '';
+
+  const userPrompt = `${instructions ? instructions + '\n\n' : ''}Process this event:\n\`\`\`json\n${JSON.stringify(event, null, 2)}\n\`\`\``;
+
+  console.log(`[Agent Handler] Processing event ${event.id} with model ${model}`);
+
+  try {
+    const result = await generateText({
+      model: openai(model),
+      system: systemPrompt,
+      prompt: userPrompt,
+      maxTokens: handler.maxTokens || 500,
+    });
+
+    const agentResponse = result.text;
+    console.log(`[Agent Handler] Response: ${agentResponse.substring(0, 100)}...`);
+
+    // Send the agent's response to ntfy.sh so it's visible
+    await fetch(NTFY_URL, {
+      method: 'POST',
+      headers: {
+        'Title': `Agent: ${event.type}`,
+        'Tags': 'robot,brain',
+        'Priority': 'default',
+      },
+      body: agentResponse,
+    });
+
+    console.log(`[Agent Handler] Sent response to ntfy.sh`);
+  } catch (error) {
+    console.error(`[Agent Handler] Error:`, error);
+
+    // Send error notification
+    await fetch(NTFY_URL, {
+      method: 'POST',
+      headers: {
+        'Title': `Agent Error: ${event.type}`,
+        'Tags': 'warning,robot',
+        'Priority': 'high',
+      },
+      body: `Failed to process event: ${error instanceof Error ? error.message : String(error)}`,
+    });
+  }
+}
 
 /**
  * Get or create the events server instance
@@ -18,6 +83,9 @@ export function getEventsServer(): EventsServer {
       events: {
         maxSubscriptions: 100,
         supportedSources: ['github', 'gmail', 'slack', 'custom'],
+      },
+      handlers: {
+        onAgentHandler: handleAgentEvent,
       },
     });
 
@@ -88,8 +156,39 @@ function setupDemoSubscriptions(): void {
     },
   });
 
+  // Demo subscription 4: Agent handler for error events
+  // The agent analyzes errors and suggests fixes
+  server.subscriptionManager.create('demo', {
+    filter: {
+      eventTypes: ['*.error', '*.failed', 'error.*'],
+    },
+    delivery: { channels: ['realtime'] },
+    handler: {
+      type: 'agent',
+      systemPrompt: 'You are an incident response assistant. Analyze the error event and provide: 1) A brief summary of what went wrong, 2) Potential root causes, 3) Suggested next steps to resolve the issue. Be concise and actionable.',
+      model: 'gpt-4o-mini',
+      instructions: 'Focus on practical advice. Keep your response under 200 words.',
+      maxTokens: 300,
+    },
+  });
+
+  // Demo subscription 5: Agent handler for custom analysis requests
+  server.subscriptionManager.create('demo', {
+    filter: {
+      eventTypes: ['analyze.*', 'custom.analyze'],
+    },
+    delivery: { channels: ['realtime'] },
+    handler: {
+      type: 'agent',
+      systemPrompt: 'You are a data analyst assistant. Analyze the provided event data and extract key insights. Summarize findings in a clear, structured format.',
+      model: 'gpt-4o-mini',
+      maxTokens: 500,
+    },
+  });
+
   console.log(`Demo subscriptions created. Events will be sent to: ${NTFY_URL}`);
   console.log(`Subscribe to notifications: https://ntfy.sh/${NTFY_TOPIC}`);
+  console.log(`Agent handlers configured for error events and analysis requests.`);
 }
 
 /**
@@ -184,6 +283,43 @@ export function createAlertEvent(title: string, message: string, priority: 'high
 }
 
 /**
+ * Create an error event (triggers agent handler)
+ */
+export function createErrorEvent(
+  errorType: string,
+  errorMessage: string,
+  context: Record<string, unknown> = {}
+): MCPEvent {
+  return createEvent(
+    `error.${errorType}`,
+    {
+      error: errorMessage,
+      context,
+      occurredAt: new Date().toISOString(),
+    },
+    { source: 'custom', priority: 'high', tags: ['error', 'demo'] }
+  );
+}
+
+/**
+ * Create an analysis request event (triggers agent handler)
+ */
+export function createAnalyzeEvent(
+  subject: string,
+  data: Record<string, unknown>
+): MCPEvent {
+  return createEvent(
+    'analyze.request',
+    {
+      subject,
+      data,
+      requestedAt: new Date().toISOString(),
+    },
+    { source: 'custom', priority: 'normal', tags: ['analyze', 'demo'] }
+  );
+}
+
+/**
  * Get demo info
  */
 export function getDemoInfo() {
@@ -198,6 +334,10 @@ export function getDemoInfo() {
       id: s.id,
       filter: s.filter,
       handlerType: s.handler?.type,
+      handlerConfig: s.handler?.type === 'agent' ? {
+        model: (s.handler as AgentEventHandler).model,
+        systemPrompt: (s.handler as AgentEventHandler).systemPrompt?.substring(0, 50) + '...',
+      } : undefined,
     })),
   };
 }

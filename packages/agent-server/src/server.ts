@@ -20,6 +20,8 @@ import {
   publishEvent,
   createSampleEvent,
   createAlertEvent,
+  createErrorEvent,
+  createAnalyzeEvent,
   getDemoInfo,
 } from './events-demo.js';
 import { createEvent } from '@mcpe/core';
@@ -820,6 +822,77 @@ export function createApp(): Hono {
         handler: s.handler ? { type: s.handler.type } : undefined,
       })),
     });
+  });
+
+  // Quick publish: Error event (triggers agent handler)
+  app.post('/publish/error', async (c) => {
+    try {
+      const body = await c.req.json().catch(() => ({}));
+      const { errorType, errorMessage, context } = body as {
+        errorType?: string;
+        errorMessage?: string;
+        context?: Record<string, unknown>;
+      };
+
+      const event = createErrorEvent(
+        errorType || 'application',
+        errorMessage || 'An unexpected error occurred',
+        context || { stack: 'Error: Something went wrong\n    at processRequest (/app/server.js:42)' }
+      );
+
+      const result = await publishEvent(event);
+
+      return c.json({
+        success: true,
+        event: { id: event.id, type: event.type, priority: event.metadata.priority },
+        matchedSubscriptions: result.matchedSubscriptions,
+        message: 'Error event published! The agent will analyze it and send results to ntfy.sh.',
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      return c.json({ success: false, error: errorMessage }, 500);
+    }
+  });
+
+  // Quick publish: Analyze event (triggers agent handler)
+  app.post('/publish/analyze', async (c) => {
+    try {
+      const body = await c.req.json().catch(() => ({}));
+      const { subject, data } = body as {
+        subject?: string;
+        data?: Record<string, unknown>;
+      };
+
+      const event = createAnalyzeEvent(
+        subject || 'Sample Data Analysis',
+        data || {
+          metrics: {
+            users: 1250,
+            sessions: 4320,
+            bounceRate: 0.42,
+            avgSessionDuration: 185,
+          },
+          trends: {
+            usersChange: '+12%',
+            sessionsChange: '+8%',
+            bounceRateChange: '-3%',
+          },
+          period: 'last 7 days',
+        }
+      );
+
+      const result = await publishEvent(event);
+
+      return c.json({
+        success: true,
+        event: { id: event.id, type: event.type },
+        matchedSubscriptions: result.matchedSubscriptions,
+        message: 'Analyze event published! The agent will process it and send insights to ntfy.sh.',
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      return c.json({ success: false, error: errorMessage }, 500);
+    }
   });
 
   return app;
