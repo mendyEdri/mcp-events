@@ -5,6 +5,9 @@ import type {
   CreateSubscriptionRequest,
   ESMCPEvent,
   ServerCapabilities,
+  CronSchedule,
+  ScheduledDelivery,
+  DeliveryChannel,
 } from '@esmcp/core';
 
 export interface MCPEConnectionOptions {
@@ -18,6 +21,9 @@ export interface SubscriptionInfo {
   filter: EventFilter;
   createdAt: Date;
   eventCount: number;
+  deliveryChannel: DeliveryChannel;
+  cronSchedule?: CronSchedule;
+  scheduledDelivery?: ScheduledDelivery;
 }
 
 export class MCPEIntegration {
@@ -80,6 +86,9 @@ export class MCPEIntegration {
     return this.client?.serverCapabilities ?? null;
   }
 
+  /**
+   * Subscribe with real-time WebSocket delivery
+   */
   async subscribe(
     filter: EventFilter,
     onEvent?: (event: ESMCPEvent) => void
@@ -103,6 +112,7 @@ export class MCPEIntegration {
       filter,
       createdAt: new Date(),
       eventCount: 0,
+      deliveryChannel: 'websocket',
     };
 
     this.subscriptions.set(subscription.id, info);
@@ -113,6 +123,122 @@ export class MCPEIntegration {
     }
 
     // Register event listener for this subscription
+    this.client.onEvent('*', (event, subscriptionId) => {
+      if (subscriptionId === subscription.id) {
+        const subInfo = this.subscriptions.get(subscription.id);
+        if (subInfo) {
+          subInfo.eventCount++;
+        }
+        const handler = this.eventHandlers.get(subscription.id);
+        if (handler) {
+          handler(event);
+        }
+      }
+    });
+
+    return info;
+  }
+
+  /**
+   * Subscribe with cron-based recurring delivery
+   * Events are collected and delivered on a schedule (e.g., daily digest, hourly summary)
+   */
+  async subscribeWithCron(
+    filter: EventFilter,
+    cronSchedule: CronSchedule,
+    onEvent?: (event: ESMCPEvent) => void
+  ): Promise<SubscriptionInfo> {
+    if (!this.client) {
+      throw new Error('Not connected to MCPE EventHub');
+    }
+
+    const request: CreateSubscriptionRequest = {
+      filter,
+      delivery: {
+        channels: ['cron'],
+        priority: 'batch',
+        cronSchedule,
+      },
+    };
+
+    const subscription: Subscription = await this.client.subscribe(request);
+
+    const info: SubscriptionInfo = {
+      id: subscription.id,
+      filter,
+      createdAt: new Date(),
+      eventCount: 0,
+      deliveryChannel: 'cron',
+      cronSchedule,
+    };
+
+    this.subscriptions.set(subscription.id, info);
+
+    // Set up event handler for when cron triggers delivery
+    if (onEvent) {
+      this.eventHandlers.set(subscription.id, onEvent);
+    }
+
+    // Register event listener
+    this.client.onEvent('*', (event, subscriptionId) => {
+      if (subscriptionId === subscription.id) {
+        const subInfo = this.subscriptions.get(subscription.id);
+        if (subInfo) {
+          subInfo.eventCount++;
+        }
+        const handler = this.eventHandlers.get(subscription.id);
+        if (handler) {
+          handler(event);
+        }
+      }
+    });
+
+    return info;
+  }
+
+  /**
+   * Subscribe with one-time scheduled delivery
+   * Events are collected and delivered at a specific time (e.g., "remind me in 4 hours")
+   */
+  async subscribeScheduled(
+    filter: EventFilter,
+    scheduledDelivery: ScheduledDelivery,
+    onEvent?: (event: ESMCPEvent) => void
+  ): Promise<SubscriptionInfo> {
+    if (!this.client) {
+      throw new Error('Not connected to MCPE EventHub');
+    }
+
+    const request: CreateSubscriptionRequest = {
+      filter,
+      delivery: {
+        channels: ['scheduled'],
+        priority: 'normal',
+        scheduledDelivery,
+      },
+      // Auto-expire after delivery if configured
+      expiresAt: scheduledDelivery.autoExpire ? scheduledDelivery.deliverAt : undefined,
+    };
+
+    const subscription: Subscription = await this.client.subscribe(request);
+
+    const info: SubscriptionInfo = {
+      id: subscription.id,
+      filter,
+      createdAt: new Date(),
+      eventCount: 0,
+      deliveryChannel: 'scheduled',
+      scheduledDelivery,
+    };
+
+    this.subscriptions.set(subscription.id, info);
+
+    // Set up event handler for when scheduled delivery triggers
+    if (onEvent) {
+      this.eventHandlers.set(subscription.id, onEvent);
+    }
+
+    // Register event listener
     this.client.onEvent('*', (event, subscriptionId) => {
       if (subscriptionId === subscription.id) {
         const subInfo = this.subscriptions.get(subscription.id);

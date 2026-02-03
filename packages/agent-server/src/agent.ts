@@ -29,6 +29,22 @@ Example event types:
 
 You can use wildcard patterns like "github.*" or "github.pull_request.*" to match multiple event types.
 
+DELIVERY CHANNELS:
+1. Real-time (websocket): Events delivered immediately as they occur
+2. Cron (recurring schedule): Events collected and delivered on a schedule
+   - Use for: "daily digest", "hourly summary", "weekly report", "every Monday at 9am"
+   - Cron presets: @hourly, @daily, @weekly, @monthly
+   - Custom cron: "0 9 * * *" (daily at 9am), "0 * * * *" (every hour), "0 9 * * 1" (Monday 9am)
+3. Scheduled (one-time): Events collected and delivered at a specific time
+   - Use for: "remind me in 4 hours", "next Sunday", "on January 15th"
+   - Requires a specific datetime
+
+When users ask for reminders, digests, summaries, or time-based delivery, use the appropriate channel:
+- "daily digest" → use subscribeCron with @daily
+- "remind me in X hours" → use subscribeScheduled with calculated datetime
+- "every Monday" → use subscribeCron with "0 9 * * 1"
+- Real-time notifications → use regular subscribe
+
 Be helpful and provide clear explanations of what you're subscribing to.`;
 
 export interface AgentRequest {
@@ -89,7 +105,7 @@ export async function runAgent(request: AgentRequest): Promise<AgentResponse> {
         }),
 
         subscribe: tool({
-          description: 'Subscribe to events matching the specified filter criteria',
+          description: 'Subscribe to events with real-time delivery (immediate notifications)',
           parameters: z.object({
             sources: z.array(z.enum(['github', 'gmail', 'slack', 'custom'])).optional()
               .describe('Event sources to subscribe to'),
@@ -102,7 +118,6 @@ export async function runAgent(request: AgentRequest): Promise<AgentResponse> {
           }),
           execute: async ({ sources, eventTypes, tags, priority }) => {
             if (!mcpe.isConnected()) {
-              // Try to connect first
               await mcpe.connect({ url: mcpeUrl });
             }
 
@@ -120,7 +135,113 @@ export async function runAgent(request: AgentRequest): Promise<AgentResponse> {
               success: true,
               subscriptionId: subscription.id,
               filter: subscription.filter,
-              message: `Created subscription for ${formatFilter(filter)}`,
+              deliveryChannel: 'websocket',
+              message: `Created real-time subscription for ${formatFilter(filter)}`,
+            };
+          },
+        }),
+
+        subscribeCron: tool({
+          description: 'Subscribe to events with recurring scheduled delivery (daily digest, weekly report, hourly summary, etc.)',
+          parameters: z.object({
+            sources: z.array(z.enum(['github', 'gmail', 'slack', 'custom'])).optional()
+              .describe('Event sources to subscribe to'),
+            eventTypes: z.array(z.string()).optional()
+              .describe('Specific event types or patterns'),
+            tags: z.array(z.string()).optional()
+              .describe('Tags to filter events by'),
+            priority: z.array(z.enum(['low', 'normal', 'high', 'critical'])).optional()
+              .describe('Priority levels to filter by'),
+            cronExpression: z.string()
+              .describe('Cron expression or preset. Presets: @hourly, @daily, @weekly, @monthly. Custom: "0 9 * * *" (9am daily), "0 9 * * 1" (Monday 9am)'),
+            timezone: z.string().default('UTC')
+              .describe('IANA timezone (e.g., "America/New_York", "Europe/London")'),
+            maxEventsPerDelivery: z.number().default(100).optional()
+              .describe('Maximum events per delivery batch'),
+          }),
+          execute: async ({ sources, eventTypes, tags, priority, cronExpression, timezone, maxEventsPerDelivery }) => {
+            if (!mcpe.isConnected()) {
+              await mcpe.connect({ url: mcpeUrl });
+            }
+
+            const filter: EventFilter = {};
+            if (sources) filter.sources = sources as EventSource[];
+            if (eventTypes) filter.eventTypes = eventTypes;
+            if (tags) filter.tags = tags;
+            if (priority) filter.priority = priority;
+
+            const subscription = await mcpe.subscribeWithCron(filter, {
+              expression: cronExpression,
+              timezone: timezone || 'UTC',
+              aggregateEvents: true,
+              maxEventsPerDelivery: maxEventsPerDelivery || 100,
+            });
+
+            return {
+              success: true,
+              subscriptionId: subscription.id,
+              filter: subscription.filter,
+              deliveryChannel: 'cron',
+              cronSchedule: {
+                expression: cronExpression,
+                timezone,
+                humanReadable: formatCronExpression(cronExpression),
+              },
+              message: `Created recurring subscription for ${formatFilter(filter)}, delivering ${formatCronExpression(cronExpression)}`,
+            };
+          },
+        }),
+
+        subscribeScheduled: tool({
+          description: 'Subscribe to events with one-time scheduled delivery (remind me in X hours, next Sunday, specific date)',
+          parameters: z.object({
+            sources: z.array(z.enum(['github', 'gmail', 'slack', 'custom'])).optional()
+              .describe('Event sources to subscribe to'),
+            eventTypes: z.array(z.string()).optional()
+              .describe('Specific event types or patterns'),
+            tags: z.array(z.string()).optional()
+              .describe('Tags to filter events by'),
+            priority: z.array(z.enum(['low', 'normal', 'high', 'critical'])).optional()
+              .describe('Priority levels to filter by'),
+            deliverAt: z.string()
+              .describe('ISO 8601 datetime for delivery (e.g., "2025-01-15T14:00:00Z")'),
+            timezone: z.string().default('UTC')
+              .describe('IANA timezone'),
+            description: z.string().optional()
+              .describe('Human-readable description (e.g., "in 4 hours", "next Sunday")'),
+            autoExpire: z.boolean().default(true).optional()
+              .describe('Automatically expire subscription after delivery'),
+          }),
+          execute: async ({ sources, eventTypes, tags, priority, deliverAt, timezone, description, autoExpire }) => {
+            if (!mcpe.isConnected()) {
+              await mcpe.connect({ url: mcpeUrl });
+            }
+
+            const filter: EventFilter = {};
+            if (sources) filter.sources = sources as EventSource[];
+            if (eventTypes) filter.eventTypes = eventTypes;
+            if (tags) filter.tags = tags;
+            if (priority) filter.priority = priority;
+
+            const subscription = await mcpe.subscribeScheduled(filter, {
+              deliverAt,
+              timezone: timezone || 'UTC',
+              description,
+              aggregateEvents: true,
+              autoExpire: autoExpire !== false,
+            });
+
+            return {
+              success: true,
+              subscriptionId: subscription.id,
+              filter: subscription.filter,
+              deliveryChannel: 'scheduled',
+              scheduledDelivery: {
+                deliverAt,
+                timezone,
+                description,
+              },
+              message: `Created scheduled subscription for ${formatFilter(filter)}, delivering at ${description || deliverAt}`,
             };
           },
         }),
@@ -135,6 +256,7 @@ export async function runAgent(request: AgentRequest): Promise<AgentResponse> {
               subscriptions: subscriptions.map(s => ({
                 id: s.id,
                 filter: s.filter,
+                deliveryChannel: s.deliveryChannel,
                 eventCount: s.eventCount,
                 createdAt: s.createdAt.toISOString(),
               })),
@@ -162,7 +284,9 @@ export async function runAgent(request: AgentRequest): Promise<AgentResponse> {
 
     for (const step of result.steps) {
       for (const toolResult of step.toolResults) {
-        if (toolResult.toolName === 'subscribe' && typeof toolResult.result === 'object' && toolResult.result !== null) {
+        const toolName = toolResult.toolName;
+        if ((toolName === 'subscribe' || toolName === 'subscribeCron' || toolName === 'subscribeScheduled') &&
+            typeof toolResult.result === 'object' && toolResult.result !== null) {
           const res = toolResult.result as { subscriptionId?: string };
           if (res.subscriptionId) {
             subscriptionId = res.subscriptionId;
@@ -205,4 +329,45 @@ function formatFilter(filter: EventFilter): string {
   }
 
   return parts.length > 0 ? parts.join(', ') : 'all events';
+}
+
+function formatCronExpression(expression: string): string {
+  const presets: Record<string, string> = {
+    '@hourly': 'every hour',
+    '@daily': 'daily at midnight',
+    '@weekly': 'weekly on Sunday',
+    '@monthly': 'monthly on the 1st',
+  };
+
+  if (presets[expression]) {
+    return presets[expression];
+  }
+
+  // Try to parse common patterns
+  const parts = expression.split(' ');
+  if (parts.length === 5) {
+    const [minute, hour, dayOfMonth, month, dayOfWeek] = parts;
+
+    // Every hour
+    if (minute !== '*' && hour === '*' && dayOfMonth === '*' && month === '*' && dayOfWeek === '*') {
+      return `every hour at :${minute.padStart(2, '0')}`;
+    }
+
+    // Daily at specific time
+    if (minute !== '*' && hour !== '*' && dayOfMonth === '*' && month === '*' && dayOfWeek === '*') {
+      return `daily at ${hour}:${minute.padStart(2, '0')}`;
+    }
+
+    // Weekly on specific day
+    if (dayOfWeek !== '*' && dayOfMonth === '*' && month === '*') {
+      const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+      const dayName = days[parseInt(dayOfWeek)] || dayOfWeek;
+      if (hour !== '*') {
+        return `every ${dayName} at ${hour}:${minute.padStart(2, '0')}`;
+      }
+      return `every ${dayName}`;
+    }
+  }
+
+  return `on schedule: ${expression}`;
 }

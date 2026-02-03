@@ -46,7 +46,19 @@ const builtinTools: AgentTool[] = [
   },
   {
     name: 'subscribe',
-    description: 'Subscribe to events matching the specified filter criteria',
+    description: 'Subscribe to events with real-time delivery (immediate notifications)',
+    enabled: true,
+    source: 'builtin',
+  },
+  {
+    name: 'subscribeCron',
+    description: 'Subscribe with recurring scheduled delivery (daily digest, weekly report, hourly summary)',
+    enabled: true,
+    source: 'builtin',
+  },
+  {
+    name: 'subscribeScheduled',
+    description: 'Subscribe with one-time scheduled delivery (remind me in X hours, next Sunday)',
     enabled: true,
     source: 'builtin',
   },
