@@ -3,11 +3,11 @@
     {
       "name": "_autosave",
       "created_at": "2026-02-02T22:26:43.316611Z",
-      "updated_at": "2026-02-03T15:32:05.279761Z",
+      "updated_at": "2026-02-03T15:37:15.917774Z",
       "message_count": 10,
       "model": "accounts/fireworks/models/kimi-k2p5",
       "mode": "code",
-      "summary": "just plan: lets add two new mcpe delivery channels - both time based, one cron job -      \n  with ti"
+      "summary": "{\"success\": true, \"data\": {\"status\": \"plan_mode_requested\", \"reason\": \"User wants to plan two new ti"
     }
   ],
   "active": null
