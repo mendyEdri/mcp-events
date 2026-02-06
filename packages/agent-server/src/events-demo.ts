@@ -1,8 +1,10 @@
 import { EventsServer, createEvent, type MCPEvent, type AgentEventHandler } from '@mcpe/core';
 import { generateText } from 'ai';
 import { createOpenAI } from '@ai-sdk/openai';
+import { notifySSEClients } from './agent.js';
+import { getEnabledSubscriptions } from './mcpe-config.js';
 
-// Default ntfy.sh topic for demos
+// Default ntfy.sh topic for demos (optional fallback)
 const NTFY_TOPIC = process.env.NTFY_TOPIC || 'mcpe-demo';
 const NTFY_URL = `https://ntfy.sh/${NTFY_TOPIC}`;
 
@@ -15,13 +17,50 @@ const openai = createOpenAI({
 // In-memory events server for demo
 let eventsServer: EventsServer | null = null;
 
+// Event history for debugging (stores last 50 events)
+interface EventHistoryEntry {
+  id: string;
+  type: string;
+  receivedAt: string;
+  matchedSubscriptions: number;
+  processed: boolean;
+  error?: string;
+}
+const eventHistory: EventHistoryEntry[] = [];
+const MAX_HISTORY = 50;
+
 /**
- * Agent handler callback - invokes OpenAI and sends result to ntfy.sh
+ * Add an event to the history
+ */
+function addToHistory(event: MCPEvent, matchedSubscriptions: number, processed: boolean, error?: string): void {
+  eventHistory.unshift({
+    id: event.id,
+    type: event.type,
+    receivedAt: new Date().toISOString(),
+    matchedSubscriptions,
+    processed,
+    error,
+  });
+  // Keep only the last MAX_HISTORY entries
+  if (eventHistory.length > MAX_HISTORY) {
+    eventHistory.pop();
+  }
+}
+
+/**
+ * Get recent event history for debugging
+ */
+export function getEventHistory(): EventHistoryEntry[] {
+  return [...eventHistory];
+}
+
+/**
+ * Agent handler callback - invokes OpenAI and sends result to chat via SSE
  */
 async function handleAgentEvent(
   event: MCPEvent,
   handler: AgentEventHandler,
-  _subscriptionId: string
+  subscriptionId: string
 ): Promise<void> {
   const model = handler.model || 'gpt-4o-mini';
 
@@ -31,7 +70,8 @@ async function handleAgentEvent(
 
   const userPrompt = `${instructions ? instructions + '\n\n' : ''}Process this event:\n\`\`\`json\n${JSON.stringify(event, null, 2)}\n\`\`\``;
 
-  console.log(`[Agent Handler] Processing event ${event.id} with model ${model}`);
+  console.log(`[Agent Handler] Processing event ${event.id} with subscription "${subscriptionId}" using model ${model}`);
+  console.log(`[Agent Handler] System prompt: ${systemPrompt.substring(0, 100)}...`);
 
   try {
     const result = await generateText({
@@ -44,30 +84,26 @@ async function handleAgentEvent(
     const agentResponse = result.text;
     console.log(`[Agent Handler] Response: ${agentResponse.substring(0, 100)}...`);
 
-    // Send the agent's response to ntfy.sh so it's visible
-    await fetch(NTFY_URL, {
-      method: 'POST',
-      headers: {
-        'Title': `Agent: ${event.type}`,
-        'Tags': 'robot,brain',
-        'Priority': 'default',
-      },
-      body: agentResponse,
+    // Send to chat via SSE (main delivery channel)
+    notifySSEClients({
+      taskId: `${subscriptionId}-${event.id}`,
+      task: `Event processed: ${event.type}`,
+      response: agentResponse,
+      scheduledAt: new Date(),
+      deliveredAt: new Date(),
     });
 
-    console.log(`[Agent Handler] Sent response to ntfy.sh`);
+    console.log(`[Agent Handler] Sent response to chat via SSE`);
   } catch (error) {
     console.error(`[Agent Handler] Error:`, error);
 
-    // Send error notification
-    await fetch(NTFY_URL, {
-      method: 'POST',
-      headers: {
-        'Title': `Agent Error: ${event.type}`,
-        'Tags': 'warning,robot',
-        'Priority': 'high',
-      },
-      body: `Failed to process event: ${error instanceof Error ? error.message : String(error)}`,
+    // Send error to chat
+    notifySSEClients({
+      taskId: `${subscriptionId}-${event.id}-error`,
+      task: `Error processing: ${event.type}`,
+      response: `Failed to process event: ${error instanceof Error ? error.message : String(error)}`,
+      scheduledAt: new Date(),
+      deliveredAt: new Date(),
     });
   }
 }
@@ -89,133 +125,57 @@ export function getEventsServer(): EventsServer {
       },
     });
 
-    // Set up demo subscriptions
-    setupDemoSubscriptions();
+    // Load user subscriptions from mcpe.json
+    loadUserSubscriptions();
   }
   return eventsServer;
 }
 
 /**
- * Set up demo subscriptions with ntfy.sh webhooks
+ * Load subscriptions from mcpe.json into the events server
  */
-function setupDemoSubscriptions(): void {
+function loadUserSubscriptions(): void {
   if (!eventsServer) return;
 
   const server = eventsServer;
+  const subscriptions = getEnabledSubscriptions();
 
-  // Demo subscription 1: All GitHub events -> ntfy
-  server.subscriptionManager.create('demo', {
-    filter: {
-      sources: ['github'],
-    },
-    delivery: { channels: ['realtime'] },
-    handler: {
-      type: 'webhook',
-      url: NTFY_URL,
-      headers: {
-        'Title': 'GitHub Event',
-        'Tags': 'github,octopus',
-      },
-      timeout: 5000,
-    },
-  });
+  console.log(`[Events] Loading ${subscriptions.length} subscriptions from mcpe.json`);
 
-  // Demo subscription 2: High priority events -> ntfy with priority
-  server.subscriptionManager.create('demo', {
-    filter: {
-      priority: ['high', 'critical'],
-    },
-    delivery: { channels: ['realtime'] },
-    handler: {
-      type: 'webhook',
-      url: NTFY_URL,
-      headers: {
-        'Title': 'High Priority Alert',
-        'Priority': 'high',
-        'Tags': 'warning',
-      },
-      timeout: 5000,
-    },
-  });
+  for (const sub of subscriptions) {
+    try {
+      const created = server.subscriptionManager.create(sub.name, {
+        filter: sub.filter,
+        delivery: sub.delivery || { channels: ['realtime'] },
+        handler: sub.handler,
+      });
 
-  // Demo subscription 3: Slack mentions -> ntfy
-  server.subscriptionManager.create('demo', {
-    filter: {
-      sources: ['slack'],
-      eventTypes: ['slack.message.*'],
-    },
-    delivery: { channels: ['realtime'] },
-    handler: {
-      type: 'webhook',
-      url: NTFY_URL,
-      headers: {
-        'Title': 'Slack Message',
-        'Tags': 'speech_balloon,slack',
-      },
-      timeout: 5000,
-    },
-  });
+      console.log(`[Events] Loaded subscription: ${sub.name} (${sub.filter.eventTypes?.join(', ') || 'all events'})`);
 
-  // Demo subscription 4: Agent handler for error events
-  // The agent analyzes errors and suggests fixes
-  server.subscriptionManager.create('demo', {
-    filter: {
-      eventTypes: ['*.error', '*.failed', 'error.*'],
-    },
-    delivery: { channels: ['realtime'] },
-    handler: {
-      type: 'agent',
-      systemPrompt: 'You are an incident response assistant. Analyze the error event and provide: 1) A brief summary of what went wrong, 2) Potential root causes, 3) Suggested next steps to resolve the issue. Be concise and actionable.',
-      model: 'gpt-4o-mini',
-      instructions: 'Focus on practical advice. Keep your response under 200 words.',
-      maxTokens: 300,
-    },
-  });
+      // Start scheduler for cron subscriptions
+      if (sub.delivery?.channels?.includes('cron')) {
+        server.scheduler.startSubscription(created);
+        console.log(`[Events] Started cron scheduler for: ${sub.name}`);
+      }
+    } catch (error) {
+      console.error(`[Events] Failed to load subscription ${sub.name}:`, error);
+    }
+  }
 
-  // Demo subscription 5: Agent handler for custom analysis requests
-  server.subscriptionManager.create('demo', {
-    filter: {
-      eventTypes: ['analyze.*', 'custom.analyze'],
-    },
-    delivery: { channels: ['realtime'] },
-    handler: {
-      type: 'agent',
-      systemPrompt: 'You are a data analyst assistant. Analyze the provided event data and extract key insights. Summarize findings in a clear, structured format.',
-      model: 'gpt-4o-mini',
-      maxTokens: 500,
-    },
-  });
+  if (subscriptions.length === 0) {
+    console.log(`[Events] No subscriptions configured. Create subscriptions via chat or the Subs tab.`);
+  }
+}
 
-  // Demo subscription 6: Cron-based daily digest (runs every minute for demo)
-  // In production, use "0 9 * * *" for daily at 9am
-  const cronSub = server.subscriptionManager.create('demo', {
-    filter: {
-      sources: ['github', 'slack'],
-    },
-    delivery: {
-      channels: ['cron'],
-      cronSchedule: {
-        expression: '* * * * *', // Every minute for demo (use "0 9 * * *" for daily)
-        timezone: 'UTC',
-        aggregateEvents: true,
-        maxEventsPerDelivery: 50,
-      },
-    },
-    handler: {
-      type: 'agent',
-      systemPrompt: 'You are a digest summarizer. Create a brief summary of these events as a daily digest. Group by source, highlight important items.',
-      model: 'gpt-4o-mini',
-      maxTokens: 500,
-    },
-  });
-
-  // Start the scheduler for cron subscription
-  server.scheduler.startSubscription(cronSub);
-
-  console.log(`Demo subscriptions created. Events will be sent to: ${NTFY_URL}`);
-  console.log(`Subscribe to notifications: https://ntfy.sh/${NTFY_TOPIC}`);
-  console.log(`Agent handlers configured for error events and analysis requests.`);
-  console.log(`Cron subscription active: events aggregated and delivered every minute.`);
+/**
+ * Reload subscriptions from mcpe.json (call after changes)
+ * Recreates the events server to load fresh subscriptions
+ */
+export function reloadSubscriptions(): void {
+  console.log('[Events] Reloading subscriptions...');
+  // Destroy and recreate the events server to load fresh subscriptions
+  eventsServer = null;
+  getEventsServer(); // This will create new server and load subscriptions
 }
 
 /**
@@ -227,13 +187,22 @@ export async function publishEvent(event: MCPEvent): Promise<{ success: boolean;
   // Find matching subscriptions before publishing (for response)
   const matchingSubscriptions = server.subscriptionManager.findMatchingSubscriptions(event);
 
-  // Publish the event (this will execute handlers)
-  await server.publish(event);
+  try {
+    // Publish the event (this will execute handlers)
+    await server.publish(event);
 
-  return {
-    success: true,
-    matchedSubscriptions: matchingSubscriptions.length,
-  };
+    // Record in history
+    addToHistory(event, matchingSubscriptions.length, matchingSubscriptions.length > 0);
+
+    return {
+      success: true,
+      matchedSubscriptions: matchingSubscriptions.length,
+    };
+  } catch (error) {
+    // Record error in history
+    addToHistory(event, matchingSubscriptions.length, false, error instanceof Error ? error.message : String(error));
+    throw error;
+  }
 }
 
 /**

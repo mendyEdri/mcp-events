@@ -1,0 +1,47 @@
+{
+  "version": "1.0",
+  "exportedAt": "2025-01-15T10:00:00.000Z",
+  "settings": {
+    "baseUrl": "https://api.openai.com/v1",
+    "model": "gpt-4o-mini",
+    "mcpeServerUrl": "https://your-mcpe-server.example.com",
+    "vapidPublicKey": "BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U",
+    "notificationsEnabled": true
+  },
+  "subscriptions": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "name": "GitHub Events",
+      "eventTypes": ["github.push", "github.pull_request.*"],
+      "sources": ["github"],
+      "handler": {
+        "type": "notification"
+      },
+      "enabled": true,
+      "createdAt": "2025-01-15T10:00:00.000Z"
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440001",
+      "name": "Slack Mentions",
+      "eventTypes": ["slack.message.mention"],
+      "sources": ["slack"],
+      "handler": {
+        "type": "notification"
+      },
+      "enabled": true,
+      "createdAt": "2025-01-15T10:00:00.000Z"
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440002",
+      "name": "Custom Webhooks",
+      "eventTypes": ["custom.*"],
+      "sources": ["custom"],
+      "handler": {
+        "type": "webhook",
+        "url": "https://your-webhook.example.com/handler"
+      },
+      "enabled": false,
+      "createdAt": "2025-01-15T10:00:00.000Z"
+    }
+  ]
+}

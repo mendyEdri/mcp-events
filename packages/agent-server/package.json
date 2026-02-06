@@ -23,6 +23,7 @@
     "@mcpe/core": "workspace:*",
     "@modelcontextprotocol/sdk": "^1.0.0",
     "@ai-sdk/openai": "^1.0.0",
+    "@ai-sdk/mcp": "^1.0.13",
     "ai": "^4.0.0",
     "hono": "^4.0.0",
     "@hono/node-server": "^1.13.0",

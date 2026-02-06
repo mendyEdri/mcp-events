@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm init:*)",
+      "Bash(npm install:*)",
+      "Bash(npm uninstall:*)",
+      "Bash(file:*)",
+      "Bash(git ls-tree:*)",
+      "Bash(ls:*)",
+      "Bash(rsvg-convert:*)",
+      "Bash(node --check:*)",
+      "Bash(npm run dev:*)",
+      "Bash(pnpm run dev)",
+      "Bash(pnpm build:*)",
+      "Bash(pnpm start)",
+      "Bash(curl:*)",
+      "Bash(npx serve . -p 3030)"
+    ]
+  }
+}

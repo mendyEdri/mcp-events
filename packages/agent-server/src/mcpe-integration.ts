@@ -478,6 +478,23 @@ export class MCPEIntegration {
   stopScheduledTask(taskId: string): void {
     this.localScheduler.stop(taskId);
   }
+
+  /**
+   * Stop all scheduled tasks (timers and cron jobs)
+   */
+  stopAllScheduledTasks(): number {
+    const jobs = this.localScheduler.getActiveJobs();
+    let stoppedCount = 0;
+    for (const job of jobs) {
+      try {
+        this.localScheduler.stop(job.subscriptionId);
+        stoppedCount++;
+      } catch {
+        // Ignore errors during cleanup
+      }
+    }
+    return stoppedCount;
+  }
 }
 
 // Singleton instance for the agent server

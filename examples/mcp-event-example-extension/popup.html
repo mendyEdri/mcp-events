@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- Tab Navigation -->
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="chat">Chat</button>
+    <button class="tab-btn" data-tab="mcp">MCP</button>
+    <button class="tab-btn" data-tab="events">Events</button>
+    <button class="tab-btn" data-tab="settings">Settings</button>
+  </div>
+
+  <!-- Chat Tab -->
+  <div id="chat-tab" class="tab-content active">
+    <div id="chat-messages" class="chat-messages">
+      <div class="empty-state">
+        Send a message to start chatting with AI
+      </div>
+    </div>
+    <div class="chat-input-container">
+      <input type="text" id="chat-input" placeholder="Type a message..." autocomplete="off">
+      <button id="send-btn">Send</button>
+    </div>
+  </div>
+
+  <!-- MCP Server Tab -->
+  <div id="mcp-tab" class="tab-content">
+    <div class="settings-section">
+      <h3>MCP Server Status</h3>
+      <div class="push-status">
+        <span class="status-indicator connected" id="mcp-server-indicator"></span>
+        <span id="mcp-server-status">Running in background</span>
+      </div>
+      <div class="mcp-info">
+        <small>Server: <code>browser-push-mcp-server</code></small><br>
+        <small>Connect via: <code>chrome.runtime.connect({name: 'mcp'})</code></small>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <h3>Captured Notifications</h3>
+      <div id="mcp-notifications-list" class="subscriptions-list">
+        <div class="empty-state small">No notifications captured yet</div>
+      </div>
+      <div class="btn-group">
+        <button id="refresh-mcp-notifications-btn" class="btn btn-secondary">Refresh</button>
+        <button id="clear-mcp-notifications-btn" class="btn btn-danger">Clear All</button>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <h3>Test Notification</h3>
+      <div class="form-group">
+        <input type="text" id="test-notif-title" placeholder="Notification title">
+      </div>
+      <div class="form-group">
+        <input type="text" id="test-notif-body" placeholder="Notification body">
+      </div>
+      <div class="btn-group">
+        <button id="send-test-notification-btn" class="btn btn-primary">Send Test</button>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <h3>MCP Tools</h3>
+      <div class="mcp-tools-list">
+        <div class="tool-item" onclick="callMCPTool('list_notifications')">
+          <strong>list_notifications</strong>
+          <small>List recent push notifications</small>
+        </div>
+        <div class="tool-item" onclick="callMCPTool('get_notification_stats')">
+          <strong>get_notification_stats</strong>
+          <small>Get notification statistics</small>
+        </div>
+        <div class="tool-item" onclick="callMCPTool('clear_notifications')">
+          <strong>clear_notifications</strong>
+          <small>Clear all stored notifications</small>
+        </div>
+      </div>
+    </div>
+
+    <div id="mcp-result" class="mcp-result" style="display:none">
+      <h4>Result:</h4>
+      <pre id="mcp-result-content"></pre>
+    </div>
+  </div>
+
+  <!-- Events Tab -->
+  <div id="events-tab" class="tab-content">
+    <div class="settings-section">
+      <h3>MCPE Connection</h3>
+      <div id="sse-status" class="push-status">
+        <span class="status-indicator disconnected" id="sse-indicator"></span>
+        <span id="sse-status-text">Disconnected</span>
+      </div>
+      <div class="btn-group">
+        <button id="test-connection-btn" class="btn btn-secondary">Test</button>
+        <button id="connect-sse-btn" class="btn btn-primary">Connect SSE</button>
+        <button id="disconnect-sse-btn" class="btn btn-secondary" style="display:none">Disconnect</button>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <h3>Web Push</h3>
+      <div id="push-status" class="push-status">
+        <span class="status-indicator disconnected"></span>
+        <span id="push-status-text">Not subscribed</span>
+      </div>
+      <div class="btn-group">
+        <button id="subscribe-push-btn" class="btn btn-secondary">Subscribe to Push</button>
+        <button id="unsubscribe-push-btn" class="btn btn-secondary" style="display:none">Unsubscribe</button>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <h3>Event Subscriptions</h3>
+      <div id="subscriptions-list" class="subscriptions-list">
+        <div class="empty-state small">No subscriptions configured</div>
+      </div>
+      <div class="btn-group">
+        <button id="add-subscription-btn" class="btn btn-secondary">+ Add Subscription</button>
+        <button id="refresh-subscriptions-btn" class="btn btn-secondary">Refresh</button>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <h3>Recent Events</h3>
+      <div id="events-list" class="events-list">
+        <div class="empty-state small">No events received yet</div>
+      </div>
+      <div class="btn-group">
+        <button id="clear-events-btn" class="btn btn-danger">Clear Events</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings Tab -->
+  <div id="settings-tab" class="tab-content">
+    <div class="settings-section">
+      <h3>LLM API Configuration</h3>
+      <div class="form-group">
+        <label for="base-url">Base URL</label>
+        <input type="text" id="base-url" placeholder="https://api.openai.com/v1">
+        <small>Leave empty for default OpenAI API</small>
+      </div>
+      <div class="form-group">
+        <label for="api-key">API Key</label>
+        <input type="password" id="api-key" placeholder="sk-...">
+        <small>Your API key is stored locally</small>
+      </div>
+      <div class="form-group">
+        <label for="model-input">Model</label>
+        <input type="text" id="model-input" placeholder="gpt-4o-mini">
+        <small>e.g., gpt-4o-mini, gpt-4o, claude-3-opus</small>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <h3>MCPE Configuration</h3>
+      <div class="form-group">
+        <label for="mcpe-server-url">MCPE Server URL</label>
+        <input type="text" id="mcpe-server-url" placeholder="https://your-mcpe-server.com">
+        <small>URL of your MCPE event server</small>
+      </div>
+      <div class="form-group">
+        <label for="vapid-public-key">VAPID Public Key</label>
+        <input type="text" id="vapid-public-key" placeholder="BEl62i...">
+        <small>Public key for web push authentication</small>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <h3>Notifications</h3>
+      <div class="toggle-group">
+        <span class="toggle-label">Enable notifications</span>
+        <label class="toggle">
+          <input type="checkbox" id="notifications-toggle" checked>
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <h3>Approved Sites</h3>
+      <small class="section-description">Sites where browser notifications will be captured</small>
+      <div id="approved-sites-list" class="subscriptions-list">
+        <div class="empty-state small">No sites approved yet</div>
+      </div>
+      <div class="form-group">
+        <div class="input-with-button">
+          <input type="text" id="new-site-input" placeholder="example.com or *.example.com">
+          <button id="add-site-btn" class="btn btn-primary">Add</button>
+        </div>
+        <small>Use *.domain.com to match all subdomains</small>
+      </div>
+      <div class="btn-group">
+        <button id="approve-current-site-btn" class="btn btn-secondary">Approve Current Tab</button>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <h3>Data Management</h3>
+      <div class="btn-group">
+        <button id="clear-history-btn" class="btn btn-danger">Clear Chat History</button>
+        <button id="export-config-btn" class="btn btn-secondary">Export Config</button>
+        <button id="import-config-btn" class="btn btn-secondary">Import Config</button>
+      </div>
+      <input type="file" id="import-file-input" accept=".json" style="display:none">
+    </div>
+
+    <div id="settings-status"></div>
+  </div>
+
+  <!-- Add Subscription Modal -->
+  <div id="subscription-modal" class="modal" style="display:none">
+    <div class="modal-content">
+      <h3>Add Event Subscription</h3>
+      <div class="form-group">
+        <label for="sub-name">Name</label>
+        <input type="text" id="sub-name" placeholder="my-subscription">
+      </div>
+      <div class="form-group">
+        <label for="sub-event-types">Event Types</label>
+        <input type="text" id="sub-event-types" placeholder="github.*, slack.message.*">
+        <small>Comma-separated, supports wildcards</small>
+      </div>
+      <div class="form-group">
+        <label for="sub-sources">Sources</label>
+        <input type="text" id="sub-sources" placeholder="github, slack, custom">
+        <small>Comma-separated event sources</small>
+      </div>
+      <div class="form-group">
+        <label for="sub-handler">Handler Type</label>
+        <select id="sub-handler">
+          <option value="notification">Browser Notification</option>
+          <option value="webhook">Webhook</option>
+          <option value="agent">AI Agent</option>
+        </select>
+      </div>
+      <div class="btn-group">
+        <button id="save-subscription-btn" class="btn btn-primary">Save</button>
+        <button id="cancel-subscription-btn" class="btn btn-secondary">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="mcpe-client.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

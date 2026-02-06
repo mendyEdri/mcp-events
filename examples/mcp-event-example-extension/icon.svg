@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#6366f1"/>
+      <stop offset="100%" style="stop-color:#8b5cf6"/>
+    </linearGradient>
+    <linearGradient id="shine" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ffffff;stop-opacity:0.3"/>
+      <stop offset="100%" style="stop-color:#ffffff;stop-opacity:0"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background rounded square -->
+  <rect x="8" y="8" width="112" height="112" rx="24" fill="url(#bg)"/>
+
+  <!-- Subtle shine -->
+  <rect x="8" y="8" width="112" height="56" rx="24" fill="url(#shine)"/>
+
+  <!-- Chat bubble -->
+  <path d="M32 44 L32 76 C32 82.6 37.4 88 44 88 L56 88 L64 100 L72 88 L84 88 C90.6 88 96 82.6 96 76 L96 44 C96 37.4 90.6 32 84 32 L44 32 C37.4 32 32 37.4 32 44 Z" fill="white"/>
+
+  <!-- AI sparkle dots -->
+  <circle cx="52" cy="60" r="6" fill="#6366f1"/>
+  <circle cx="76" cy="60" r="6" fill="#8b5cf6"/>
+
+  <!-- Connecting line / brain wave -->
+  <path d="M52 60 Q64 45 76 60" stroke="#a78bfa" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <path d="M52 60 Q64 75 76 60" stroke="#a78bfa" stroke-width="3" fill="none" stroke-linecap="round"/>
+</svg>

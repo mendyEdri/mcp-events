@@ -5,55 +5,5 @@
       "channels": ["realtime"]
     }
   },
-  "subscriptions": [
-    {
-      "name": "delayed-response",
-      "description": "Schedule an AI response to be delivered after a delay",
-      "filter": {
-        "eventTypes": ["user.request.delayed"]
-      },
-      "handler": {
-        "type": "agent",
-        "model": "gpt-4o-mini",
-        "systemPrompt": "You are a helpful assistant. Answer the user's question concisely.",
-        "maxTokens": 500
-      },
-      "enabled": true
-    },
-    {
-      "name": "daily-briefing",
-      "description": "Daily morning briefing at 9am",
-      "filter": {
-        "eventTypes": ["cron.daily.briefing"]
-      },
-      "delivery": {
-        "channels": ["cron"],
-        "cronSchedule": {
-          "expression": "0 9 * * *",
-          "timezone": "UTC"
-        }
-      },
-      "handler": {
-        "type": "agent",
-        "model": "gpt-4o-mini",
-        "systemPrompt": "Generate a brief daily briefing with motivational content and a productivity tip.",
-        "maxTokens": 300
-      },
-      "enabled": false
-    },
-    {
-      "name": "error-analyzer",
-      "description": "AI analyzes error events and suggests fixes",
-      "filter": {
-        "eventTypes": ["error.*", "*.failed"]
-      },
-      "handler": {
-        "type": "agent",
-        "model": "gpt-4o-mini",
-        "systemPrompt": "Analyze this error and suggest potential fixes. Be concise and actionable.",
-        "maxTokens": 400
-      },
-      "enabled": true
-    }
-  ]
+  "subscriptions": []
 }

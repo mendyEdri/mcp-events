@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Notification Test Page</title>
+  <style>
+    body { font-family: system-ui; max-width: 600px; margin: 40px auto; padding: 20px; }
+    button { padding: 12px 24px; font-size: 16px; margin: 8px; cursor: pointer; }
+    .status { padding: 12px; margin: 16px 0; border-radius: 8px; }
+    .success { background: #d1fae5; color: #059669; }
+    .error { background: #fee2e2; color: #dc2626; }
+    .info { background: #e0e7ff; color: #4f46e5; }
+  </style>
+</head>
+<body>
+  <h1>Notification Test Page</h1>
+
+  <div id="status" class="status info">
+    Click "Request Permission" first, then send test notifications.
+  </div>
+
+  <div>
+    <button onclick="requestPermission()">Request Permission</button>
+    <button onclick="sendNotification()">Send Notification</button>
+    <button onclick="sendMultiple()">Send 3 Notifications</button>
+  </div>
+
+  <h3>Custom Notification</h3>
+  <input type="text" id="title" placeholder="Title" value="Test Notification" style="padding: 8px; width: 200px;">
+  <input type="text" id="body" placeholder="Body" value="Hello from test page!" style="padding: 8px; width: 200px;">
+  <button onclick="sendCustom()">Send Custom</button>
+
+  <h3>Instructions</h3>
+  <ol>
+    <li>Open the extension popup → Settings tab</li>
+    <li>Click "Approve Current Tab" while on this page</li>
+    <li>Click "Request Permission" above</li>
+    <li>Click "Send Notification" to test</li>
+    <li>Check extension popup → MCP tab → "Captured Notifications"</li>
+  </ol>
+
+  <script>
+    function updateStatus(message, type) {
+      const status = document.getElementById('status');
+      status.textContent = message;
+      status.className = 'status ' + type;
+    }
+
+    function requestPermission() {
+      console.log('Current permission:', Notification.permission);
+      updateStatus('Requesting permission...', 'info');
+
+      Notification.requestPermission().then(permission => {
+        console.log('Permission result:', permission);
+        if (permission === 'granted') {
+          updateStatus('Permission granted! You can now send notifications.', 'success');
+        } else if (permission === 'denied') {
+          updateStatus('Permission denied. Click the lock icon in URL bar → Site settings → Notifications → Allow', 'error');
+        } else {
+          updateStatus('Permission dismissed. Try again or check browser settings.', 'error');
+        }
+      }).catch(err => {
+        console.error('Permission error:', err);
+        updateStatus('Error: ' + err.message, 'error');
+      });
+    }
+
+    function sendNotification() {
+      if (Notification.permission !== 'granted') {
+        updateStatus('Please request permission first!', 'error');
+        return;
+      }
+
+      const n = new Notification('Test Notification', {
+        body: 'Sent at ' + new Date().toLocaleTimeString(),
+        icon: 'icon128.png'
+      });
+
+      updateStatus('Notification sent! Check extension MCP tab.', 'success');
+    }
+
+    function sendMultiple() {
+      if (Notification.permission !== 'granted') {
+        updateStatus('Please request permission first!', 'error');
+        return;
+      }
+
+      for (let i = 1; i <= 3; i++) {
+        setTimeout(() => {
+          new Notification('Notification #' + i, {
+            body: 'This is test notification ' + i + ' of 3',
+            tag: 'test-' + i
+          });
+        }, i * 500);
+      }
+
+      updateStatus('Sending 3 notifications...', 'success');
+    }
+
+    function sendCustom() {
+      if (Notification.permission !== 'granted') {
+        updateStatus('Please request permission first!', 'error');
+        return;
+      }
+
+      const title = document.getElementById('title').value || 'Custom';
+      const body = document.getElementById('body').value || 'No body';
+
+      new Notification(title, { body: body });
+      updateStatus('Custom notification sent!', 'success');
+    }
+
+    // Check current permission
+    if (Notification.permission === 'granted') {
+      updateStatus('Permission already granted. Ready to send notifications!', 'success');
+    } else if (Notification.permission === 'denied') {
+      updateStatus('Notifications blocked. Enable in browser settings.', 'error');
+    }
+  </script>
+</body>
+</html>

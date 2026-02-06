@@ -1,9 +1,69 @@
-import { generateText, tool } from 'ai';
+import { generateText, tool, type Tool } from 'ai';
 import { createOpenAI } from '@ai-sdk/openai';
+import { experimental_createMCPClient as createMCPClient } from '@ai-sdk/mcp';
+import { Experimental_StdioMCPTransport as StdioMCPTransport } from '@ai-sdk/mcp/mcp-stdio';
 import { z } from 'zod';
 import { getMCPEInstance, type SubscriptionInfo } from './mcpe-integration.js';
 import type { EventFilter, EventSource, ScheduledTaskResult } from '@mcpe/core';
-import { getSubscriptionsJSON, formatSubscriptionsForDisplay, setSubscriptionEnabled } from './mcpe-config.js';
+import { getSubscriptionsJSON, formatSubscriptionsForDisplay, setSubscriptionEnabled, addSubscription, deleteSubscription, stopAllSchedulers } from './mcpe-config.js';
+import { listMCPServers } from './mcp-config.js';
+import { getAllIntegrationStatuses, getExampleById } from './examples.js';
+import { reloadSubscriptions } from './events-demo.js';
+
+// Cache for MCP clients to avoid reconnecting on every request
+const mcpClientCache: Map<string, Awaited<ReturnType<typeof createMCPClient>>> = new Map();
+
+/**
+ * Load tools from configured MCP servers
+ */
+async function loadMCPTools(): Promise<Record<string, Tool>> {
+  const mcpTools: Record<string, Tool> = {};
+  const servers = listMCPServers();
+
+  for (const { name, config } of servers) {
+    if (!config.enabled) {
+      console.log(`[MCP] Skipping disabled server: ${name}`);
+      continue;
+    }
+
+    try {
+      // Check if we have a cached client
+      let client = mcpClientCache.get(name);
+
+      if (!client) {
+        console.log(`[MCP] Connecting to server: ${name} (${config.command} ${config.args?.join(' ') || ''})`);
+
+        // Create stdio transport for command-based MCP servers
+        client = await createMCPClient({
+          transport: new StdioMCPTransport({
+            command: config.command,
+            args: config.args || [],
+            env: config.env,
+          }),
+        });
+
+        mcpClientCache.set(name, client);
+        console.log(`[MCP] Connected to server: ${name}`);
+      }
+
+      // Get tools from this MCP server
+      const tools = await client.tools();
+
+      // Merge tools, prefixing with server name to avoid conflicts
+      for (const [toolName, toolDef] of Object.entries(tools)) {
+        const prefixedName = `${name}_${toolName}`;
+        mcpTools[prefixedName] = toolDef as unknown as Tool;
+        console.log(`[MCP] Loaded tool: ${prefixedName}`);
+      }
+    } catch (error) {
+      console.error(`[MCP] Failed to load tools from ${name}:`, error);
+      // Remove from cache if connection failed
+      mcpClientCache.delete(name);
+    }
+  }
+
+  return mcpTools;
+}
 
 // Create OpenAI-compatible provider with custom base URL (Wix API)
 const openai = createOpenAI({
@@ -20,7 +80,7 @@ export function addSSEClient(client: SSEClient): () => void {
   return () => sseClients.delete(client);
 }
 
-function notifySSEClients(result: ScheduledTaskResult): void {
+export function notifySSEClients(result: ScheduledTaskResult): void {
   console.log(`[SSE] Notifying ${sseClients.size} clients`);
   for (const client of sseClients) {
     client(result);
@@ -42,71 +102,127 @@ mcpe.registerAgentExecutor(async (task, config) => {
   return result.text;
 });
 
-const SYSTEM_PROMPT = `You are an intelligent event subscription agent for the MCPE (MCP Events) protocol.
-Your role is to help users subscribe to events from various sources like GitHub, Gmail, Slack, etc.
+const SYSTEM_PROMPT = `You are an intelligent assistant for the MCPE (MCP Events) demo server.
 
-You can answer questions about MCPE, explain how subscriptions work, and help users understand the protocol even without being connected to an EventHub.
+IMPORTANT: This is a demo/prototype server. Supported event sources: GitHub (webhooks) and Google Workspace (Pub/Sub).
 
-When a user requests event subscriptions, you should:
-1. Analyze their request to understand what events they want to receive
-2. If not already connected, connect to the MCPE EventHub (requires MCPE_URL to be configured)
-3. Create appropriate subscriptions based on their requirements
-4. Provide clear feedback about what subscriptions were created
+YOUR KEY CAPABILITY - CREATING SMART SUBSCRIPTIONS:
+You can create subscriptions where an AI agent automatically processes incoming events. When users say things like:
+- "Subscribe to issues and translate them to Hebrew"
+- "Notify me about PRs and summarize the changes"
+- "Watch for new emails and summarize them"
+- "Alert me when important emails arrive"
 
-If subscription tools return an error about missing MCPE URL, explain to the user that they need to configure the MCPE_URL environment variable or provide an EventHub URL.
+Use the createAgentSubscription tool with:
+- name: A unique identifier (e.g., "issue-translator", "email-summarizer")
+- eventTypes: What to listen for (e.g., ["github.issues.opened"], ["gmail.message.received"])
+- agentInstructions: What the AI should do when events arrive
 
-Available event sources: github, gmail, slack, custom
+The flow is:
+1. You create the subscription with instructions
+2. When a matching event arrives via webhook
+3. An AI agent processes it using YOUR instructions
+4. The result is sent to the user via notifications
 
-Example event types:
-- GitHub: github.push, github.pull_request.opened, github.pull_request.merged, github.issue.opened, github.issue.closed
-- Gmail: gmail.message.received, gmail.message.sent
-- Slack: slack.message.posted, slack.reaction.added, slack.channel.created
-- Custom: any custom event type
+GITHUB EVENTS:
+- github.push - Code pushed to a branch
+- github.pull_request.opened / .closed / .merged - PR lifecycle events
+- github.pull_request_review.submitted - PR review submitted (approved/changes requested/commented)
+- github.pull_request_review_comment.created - Comments on PR code (inline code review comments)
+- github.issues.opened / .closed - Issue lifecycle events
+- github.issue_comment.created - Comments on issues (NOT PR review comments!)
 
-You can use wildcard patterns like "github.*" or "github.pull_request.*" to match multiple event types.
+GOOGLE WORKSPACE EVENTS:
+- gmail.message.received - New email received
+- gmail.message.important - Email marked as important
+- gmail.message.mention - Mentioned in email thread
+- calendar.event.created / .updated - Calendar event changes
+- calendar.event.reminder - Upcoming event reminder
+- drive.file.created / .shared - Drive file events
 
-DELIVERY CHANNELS:
-1. Real-time (websocket): Events delivered immediately as they occur
-2. Cron (recurring schedule): Events collected and delivered on a schedule
-   - Use for: "daily digest", "hourly summary", "weekly report", "every Monday at 9am"
-   - Cron presets: @hourly, @daily, @weekly, @monthly
-   - Custom cron: "0 9 * * *" (daily at 9am), "0 * * * *" (every hour), "0 9 * * 1" (Monday 9am)
-3. Scheduled (one-time): Events collected and delivered at a specific time
-   - Use for: "remind me in 4 hours", "next Sunday", "on January 15th"
-   - Requires a specific datetime
+IMPORTANT EVENT TYPE DISTINCTIONS:
+- "PR comments" or "code review comments" = github.pull_request_review_comment.created
+- "Issue comments" = github.issue_comment.created
+- "PR reviews" (approve/reject) = github.pull_request_review.submitted
+- "New emails" = gmail.message.received
 
-When users ask for reminders, digests, summaries, or time-based delivery, use the appropriate channel:
-- "daily digest" → use subscribeCron with @daily
-- "remind me in X hours" → use subscribeScheduled with calculated datetime
-- "every Monday" → use subscribeCron with "0 9 * * 1"
-- Real-time notifications → use regular subscribe
+Use wildcards like "github.*", "gmail.*", or "calendar.*"
 
-DELAYED RESPONSES:
-When users ask you to answer something "in X minutes", "after a delay", "later", etc., use the scheduleDelayedResponse tool:
-- "answer this in 1 minute" → scheduleDelayedResponse with delayMinutes: 1
-- "remind me in 5 minutes about X" → scheduleDelayedResponse with delayMinutes: 5
-- "respond after 2 minutes with Y" → scheduleDelayedResponse with delayMinutes: 2
+SETUP REQUIREMENTS:
+- GitHub: Configure a webhook pointing to this server (see Examples tab)
+- Google: Configure Google Cloud Pub/Sub push notifications (see Examples tab)
 
-The delayed response will be processed by an AI agent at the scheduled time and the response will appear in the chat.
+SUBSCRIPTION MANAGEMENT:
+- createAgentSubscription: Create new subscription with AI processing instructions
+- deleteAgentSubscription: Remove a subscription
+- getConfiguredSubscriptions: View all subscriptions
+- toggleSubscription: Enable/disable a subscription
 
-CONFIGURED SUBSCRIPTIONS (mcpe.json):
-The server has pre-configured subscriptions defined in mcpe.json. These persist across server restarts.
+REMINDERS AND DELAYED RESPONSES:
+- For ONE-TIME delayed responses ("in X minutes", "after Y minutes"): Use scheduleDelayedResponse
+- For RECURRING reminders ("every minute", "every hour", "every day"): Use scheduleRecurringResponse
+  - Common cron patterns:
+    - "* * * * *" = every minute
+    - "*/5 * * * *" = every 5 minutes
+    - "0 * * * *" = every hour
+    - "0 9 * * *" = every day at 9am
+    - "0 9 * * 1" = every Monday at 9am
 
-Tools for managing configured subscriptions:
-- getConfiguredSubscriptions: See all subscriptions in mcpe.json (name, handler type, filter, enabled status)
-- toggleSubscription: Enable or disable a specific subscription by name
-- disableAllSubscriptions: Disable all subscriptions at once
+STOPPING REMINDERS:
+- To stop all reminders: Use stopAllReminders or disableAllSubscriptions
+- To list all subscriptions including reminders: Use getConfiguredSubscriptions
+- To stop a specific reminder: Use deleteAgentSubscription with the subscription name
+- "unsubscribe from all", "stop reminders", "cancel reminders" → use stopAllReminders
 
-When a user asks:
-- "what subscriptions do I have?" → use getConfiguredSubscriptions
-- "disable error-analyzer" → use toggleSubscription with enabled=false
-- "enable daily-briefing" → use toggleSubscription with enabled=true
-- "unsubscribe from all" or "disable all" → use disableAllSubscriptions
+All subscriptions and reminders are stored in mcpe.json - this is the single source of truth.
 
-Be helpful and provide clear explanations of what you're subscribing to.`;
+Be proactive - when users describe what they want to happen with events, create the subscription for them!`;
+
+/**
+ * Generate dynamic context about enabled integrations
+ */
+function getIntegrationContext(): string {
+  const statuses = getAllIntegrationStatuses();
+  const enabledIntegrations = Object.values(statuses).filter(s => s.enabled);
+
+  if (enabledIntegrations.length === 0) {
+    return '\n\nENABLED INTEGRATIONS: None. User can enable integrations in the Examples tab.';
+  }
+
+  let context = '\n\nENABLED INTEGRATIONS:';
+  for (const integration of enabledIntegrations) {
+    const example = getExampleById(integration.id);
+    if (!example) continue;
+
+    context += `\n\n${example.icon} ${example.name} (enabled since ${new Date(integration.enabledAt || '').toLocaleDateString()})`;
+
+    if (integration.enabledSubscriptions.length > 0) {
+      context += '\n  Active event subscriptions:';
+      for (const subId of integration.enabledSubscriptions) {
+        const sub = example.availableSubscriptions?.find(s => s.id === subId);
+        if (sub) {
+          context += `\n  - ${sub.name}: ${sub.eventTypes.join(', ')}`;
+        }
+      }
+    }
+
+    if (integration.config.defaultRepo) {
+      context += `\n  Default repository: ${integration.config.defaultRepo}`;
+    }
+  }
+
+  context += '\n\nWhen user asks about their events or subscriptions, refer to these enabled integrations.';
+  return context;
+}
+
+export interface ChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
 
 export interface AgentRequest {
   userMessage: string;
+  messages?: ChatMessage[];
   mcpeUrl?: string;
 }
 
@@ -123,24 +239,48 @@ export async function runAgent(request: AgentRequest): Promise<AgentResponse> {
   const mcpeUrl = request.mcpeUrl ?? process.env.MCPE_URL;
 
   try {
-    const result = await generateText({
-      model: openai('gpt-4o-mini'),
-      system: SYSTEM_PROMPT,
-      prompt: request.userMessage,
-      tools: {
-        connectToEventHub: tool({
-          description: 'Connect to an MCPE EventHub server to enable event subscriptions',
-          parameters: z.object({
-            url: z.string().describe('The WebSocket URL of the MCPE EventHub'),
-          }),
-          execute: async ({ url }) => {
-            if (mcpe.isConnected()) {
-              return { success: true, message: 'Already connected to EventHub', url: mcpe.getConnectionUrl() };
-            }
-            await mcpe.connect({ url });
-            return { success: true, message: 'Connected to EventHub', url };
-          },
+    // Build dynamic system prompt with integration context
+    const dynamicSystemPrompt = SYSTEM_PROMPT + getIntegrationContext();
+
+    // Build messages array from conversation history
+    const conversationMessages: Array<{ role: 'user' | 'assistant'; content: string }> = [];
+
+    // Add previous messages from history (excluding the current message which is already in the array)
+    if (request.messages && request.messages.length > 0) {
+      // The last message in the array is the current user message, so we include all of them
+      for (const msg of request.messages) {
+        conversationMessages.push({
+          role: msg.role,
+          content: msg.content,
+        });
+      }
+    } else {
+      // Fallback: just use the current message
+      conversationMessages.push({
+        role: 'user',
+        content: request.userMessage,
+      });
+    }
+
+    // Load MCP tools from configured servers
+    const mcpTools = await loadMCPTools();
+    console.log(`[Agent] Loaded ${Object.keys(mcpTools).length} MCP tools`);
+
+    // Define built-in tools
+    const builtinTools = {
+      connectToEventHub: tool({
+        description: 'Connect to an MCPE EventHub server to enable event subscriptions',
+        parameters: z.object({
+          url: z.string().describe('The WebSocket URL of the MCPE EventHub'),
         }),
+        execute: async ({ url }) => {
+          if (mcpe.isConnected()) {
+            return { success: true, message: 'Already connected to EventHub', url: mcpe.getConnectionUrl() };
+          }
+          await mcpe.connect({ url });
+          return { success: true, message: 'Connected to EventHub', url };
+        },
+      }),
 
         subscribe: tool({
           description: 'Subscribe to events with real-time delivery (immediate notifications)',
@@ -294,42 +434,85 @@ export async function runAgent(request: AgentRequest): Promise<AgentResponse> {
         }),
 
         scheduleDelayedResponse: tool({
-          description: 'Schedule a delayed AI response. Use when user asks you to answer something "in X minutes", "after Y minutes", or wants a delayed response. The AI will process the task at the scheduled time and send the response to ntfy.sh.',
+          description: 'Schedule a one-time delayed reminder or response. Use when user asks for a one-time reminder "in X minutes", "in X seconds", "after Y minutes".',
           parameters: z.object({
-            task: z.string()
-              .describe('The task or question the AI should answer when the delay expires'),
+            reminderTopic: z.string()
+              .describe('What to remind the user about (e.g., "drink water", "check the oven", "call mom")'),
             delayMinutes: z.number().min(0.1).max(60)
-              .describe('Delay in minutes before the AI responds (0.1 to 60 minutes, i.e., 6 seconds to 60 minutes)'),
-            instructions: z.string().optional()
-              .describe('Additional instructions for how to answer (optional)'),
+              .describe('Delay in minutes before the reminder (0.1 to 60 minutes, i.e., 6 seconds to 60 minutes)'),
           }),
-          execute: async ({ task, delayMinutes, instructions }) => {
+          execute: async ({ reminderTopic, delayMinutes }) => {
             const delayMs = delayMinutes * 60 * 1000;
+            const name = `reminder-${Date.now()}`;
 
-            // Schedule agent task - the registered agent executor will process it
-            const result = mcpe.scheduleAgentTask({
-              task,
-              delayMs,
-              handler: {
-                type: 'agent',
-                model: 'gpt-4o-mini',
-                systemPrompt: 'You are a helpful AI assistant. The user asked you to respond after a delay. Now it is time to answer their question. Be helpful, concise, and provide a complete answer.',
-                instructions,
-                maxTokens: 500,
+            // Add to mcpe.json with schedule - this persists and starts the scheduler
+            const result = addSubscription({
+              name,
+              description: reminderTopic,
+              eventTypes: ['scheduled.reminder.once'],
+              systemPrompt: 'You are a friendly reminder assistant. Your job is to generate a short reminder message. Do NOT ask questions - just deliver the reminder directly. Be concise and positive.',
+              maxTokens: 100,
+              schedule: {
+                type: 'once',
+                delayMs,
               },
-              onComplete: (taskResult) => {
-                console.log(`[Delayed Response] Completed: ${taskResult.response.substring(0, 100)}...`);
-                // Notify all SSE clients
-                notifySSEClients(taskResult);
-              },
+            }, (taskResult) => {
+              console.log(`[Reminder] ${taskResult.response.substring(0, 100)}...`);
+              notifySSEClients(taskResult);
             });
+
+            if (!result.success) {
+              return { success: false, error: result.error };
+            }
 
             return {
               success: true,
+              subscriptionName: name,
               taskId: result.taskId,
-              scheduledFor: result.scheduledFor.toISOString(),
               delayMinutes,
-              message: `Scheduled AI response for "${task}" in ${delayMinutes} minute(s). The response will appear in the chat.`,
+              message: `Scheduled reminder about "${reminderTopic}" in ${delayMinutes} minute(s). The reminder will appear in the chat.`,
+            };
+          },
+        }),
+
+        scheduleRecurringResponse: tool({
+          description: 'Schedule a recurring AI response. Use when user asks for recurring reminders like "every minute", "every hour", "every day at 9am". This works locally without needing an external EventHub connection.',
+          parameters: z.object({
+            reminderTopic: z.string()
+              .describe('What to remind the user about (e.g., "drink water", "take a break", "check emails")'),
+            cronExpression: z.string()
+              .describe('Cron expression for the schedule. Use: "* * * * *" for every minute, "0 * * * *" for every hour, "0 9 * * *" for 9am daily, "*/5 * * * *" for every 5 minutes'),
+          }),
+          execute: async ({ reminderTopic, cronExpression }) => {
+            const name = `recurring-${Date.now()}`;
+
+            // Add to mcpe.json with cron schedule - this persists and starts the scheduler
+            const result = addSubscription({
+              name,
+              description: reminderTopic,
+              eventTypes: ['scheduled.reminder.cron'],
+              systemPrompt: 'You are a friendly reminder assistant. Your job is to generate short, encouraging reminder messages. Do NOT ask questions - just deliver the reminder directly. Be concise and positive.',
+              maxTokens: 100,
+              schedule: {
+                type: 'cron',
+                cronExpression,
+              },
+            }, (taskResult) => {
+              console.log(`[Recurring Reminder] ${taskResult.response.substring(0, 100)}...`);
+              notifySSEClients(taskResult);
+            });
+
+            if (!result.success) {
+              return { success: false, error: result.error };
+            }
+
+            return {
+              success: true,
+              subscriptionName: name,
+              taskId: result.taskId,
+              cronExpression,
+              humanReadable: formatCronExpression(cronExpression),
+              message: `Created recurring reminder about "${reminderTopic}" - ${formatCronExpression(cronExpression)}. Reminders will appear in the chat.`,
             };
           },
         }),
@@ -348,6 +531,75 @@ export async function runAgent(request: AgentRequest): Promise<AgentResponse> {
                 eventCount: s.eventCount,
                 createdAt: s.createdAt.toISOString(),
               })),
+            };
+          },
+        }),
+
+        listScheduledTasks: tool({
+          description: 'List all active scheduled tasks including recurring reminders (cron) and one-time delayed reminders (timer). Use this to see what reminders are currently active.',
+          parameters: z.object({}),
+          execute: async () => {
+            const info = mcpe.getLocalSchedulerInfo();
+            return {
+              count: info.activeJobs.length,
+              tasks: info.activeJobs.map(job => ({
+                taskId: job.subscriptionId,
+                type: job.type,
+                nextRun: job.nextRun?.toISOString(),
+                pendingEvents: job.pendingEvents,
+              })),
+            };
+          },
+        }),
+
+        stopScheduledTask: tool({
+          description: 'Stop a specific scheduled task (reminder) by its task ID. Use listScheduledTasks first to get the task IDs.',
+          parameters: z.object({
+            taskId: z.string().describe('The ID of the task to stop'),
+          }),
+          execute: async ({ taskId }) => {
+            try {
+              mcpe.stopScheduledTask(taskId);
+              return {
+                success: true,
+                message: `Stopped scheduled task: ${taskId}`,
+              };
+            } catch (error) {
+              return {
+                success: false,
+                error: `Failed to stop task: ${error}`,
+              };
+            }
+          },
+        }),
+
+        stopAllReminders: tool({
+          description: 'Stop ALL reminders (both recurring and one-time). Also removes them from mcpe.json. Use when user says "stop all reminders", "unsubscribe from all", "cancel all reminders".',
+          parameters: z.object({}),
+          execute: async () => {
+            // Stop all active schedulers
+            const stoppedCount = stopAllSchedulers();
+
+            // Also delete scheduled subscriptions from config
+            const data = getSubscriptionsJSON();
+            let deletedCount = 0;
+            for (const sub of data.subscriptions) {
+              if (sub.delivery?.channels?.includes('cron') || sub.delivery?.channels?.includes('scheduled')) {
+                deleteSubscription(sub.name);
+                deletedCount++;
+              }
+            }
+
+            // Reload subscriptions in events server
+            reloadSubscriptions();
+
+            return {
+              success: true,
+              stoppedCount,
+              deletedCount,
+              message: stoppedCount > 0 || deletedCount > 0
+                ? `Stopped ${stoppedCount} active reminder(s) and removed ${deletedCount} from config.`
+                : 'No active reminders to stop.',
             };
           },
         }),
@@ -392,9 +644,13 @@ export async function runAgent(request: AgentRequest): Promise<AgentResponse> {
         }),
 
         disableAllSubscriptions: tool({
-          description: 'Disable all configured subscriptions. Use when user says "unsubscribe from all" or "disable all subscriptions".',
+          description: 'Disable all configured subscriptions and stop all reminders. Use when user says "unsubscribe from all", "stop everything", or "disable all".',
           parameters: z.object({}),
           execute: async () => {
+            // First stop all schedulers
+            const stoppedCount = stopAllSchedulers();
+
+            // Then disable all subscriptions in config
             const data = getSubscriptionsJSON();
             let disabledCount = 0;
             for (const sub of data.subscriptions) {
@@ -403,12 +659,73 @@ export async function runAgent(request: AgentRequest): Promise<AgentResponse> {
                 disabledCount++;
               }
             }
+
+            // Reload subscriptions in events server
+            reloadSubscriptions();
+
             return {
               success: true,
               disabledCount,
-              message: `Disabled ${disabledCount} subscription(s)`,
+              stoppedSchedulers: stoppedCount,
+              message: `Disabled ${disabledCount} subscription(s) and stopped ${stoppedCount} reminder(s).`,
               subscriptions: getSubscriptionsJSON().subscriptions,
             };
+          },
+        }),
+
+        createAgentSubscription: tool({
+          description: 'Create a new subscription with an AI agent handler. Use this when users want to subscribe to events AND specify what should happen when events arrive (e.g., "subscribe to issues and translate them to Hebrew", "notify me about PRs and summarize changes"). The agent will process incoming events using the instructions you provide.',
+          parameters: z.object({
+            name: z.string().describe('A unique name for this subscription (e.g., "issue-translator", "pr-summarizer")'),
+            eventTypes: z.array(z.string()).describe('Event types to subscribe to (e.g., ["github.issues.opened", "github.pull_request.opened"])'),
+            agentInstructions: z.string().describe('Instructions for the AI agent that will process events. Be specific about what it should do (e.g., "Translate the issue title and body to Hebrew", "Summarize the PR changes in 2-3 sentences")'),
+            description: z.string().optional().describe('Optional description of what this subscription does'),
+          }),
+          execute: async ({ name, eventTypes, agentInstructions, description }) => {
+            const result = addSubscription({
+              name,
+              eventTypes,
+              description: description || `AI processes: ${agentInstructions.substring(0, 50)}...`,
+              systemPrompt: agentInstructions,
+            });
+
+            if (result.success) {
+              // Reload subscriptions in events server
+              reloadSubscriptions();
+              return {
+                success: true,
+                message: `Created subscription "${name}" for events [${eventTypes.join(', ')}]. When these events arrive, an AI agent will: ${agentInstructions}`,
+                subscription: { name, eventTypes, agentInstructions },
+              };
+            } else {
+              return {
+                success: false,
+                error: result.error,
+              };
+            }
+          },
+        }),
+
+        deleteAgentSubscription: tool({
+          description: 'Delete a subscription by name. Use when user wants to remove a subscription completely.',
+          parameters: z.object({
+            name: z.string().describe('The name of the subscription to delete'),
+          }),
+          execute: async ({ name }) => {
+            const success = deleteSubscription(name);
+            if (success) {
+              // Reload subscriptions in events server
+              reloadSubscriptions();
+              return {
+                success: true,
+                message: `Deleted subscription "${name}"`,
+              };
+            } else {
+              return {
+                success: false,
+                error: `Subscription "${name}" not found`,
+              };
+            }
           },
         }),
 
@@ -422,7 +739,16 @@ export async function runAgent(request: AgentRequest): Promise<AgentResponse> {
             return { success, subscriptionId };
           },
         }),
-      },
+    };
+
+    // Merge built-in tools with MCP tools
+    const allTools = { ...builtinTools, ...mcpTools };
+
+    const result = await generateText({
+      model: openai('gpt-4o-mini'),
+      system: dynamicSystemPrompt,
+      messages: conversationMessages,
+      tools: allTools,
       maxSteps: 5,
     });
 

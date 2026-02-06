@@ -32,7 +32,32 @@
       "Bash(pnpm --filter @esmcp/core build:*)",
       "Bash(pnpm --filter @esmcp/client build:*)",
       "Bash(pnpm --filter @esmcp/agent-server build:*)",
-      "Bash(fly deploy:*)"
+      "Bash(fly deploy:*)",
+      "Bash(wc:*)",
+      "Bash(ls:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nRefactor MCPE as MCP SDK extension\n\nThis is a major architectural change that refactors MCPE from a standalone\nimplementation to a proper extension of the official MCP SDK.\n\nKey changes:\n- Add new @anthropic/mcpe package that wraps McpServer/Client\n- EventsServer registers MCP tools for subscription management\n- Events delivered via MCP notifications instead of custom JSON-RPC\n- Update agent-server to use new @anthropic/mcpe package\n- Add basic-server and basic-client examples\n\nThe new design reduces code complexity by leveraging the MCP SDK''s\ntransport, JSON-RPC, and protocol handling while keeping our domain\ntypes \\(events, subscriptions, filters\\) as the value-add.\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(jq:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nfix: Update Dockerfile for @mcpe/core package structure\n\n- Reference packages/mcpe instead of packages/core and packages/client\n- Update build command to use @mcpe/core filter\n- Copy fly.toml to root for easier deployment\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nfeat: Wire up agent handler with OpenAI for event processing\n\n- Add onAgentHandler callback to EventsServer configuration\n- Agent handler invokes OpenAI \\(gpt-4o-mini\\) with event data\n- Uses systemPrompt, instructions, model, maxTokens from handler config\n- Sends agent responses to ntfy.sh for visibility\n\nNew demo subscriptions:\n- error.* events: Incident response agent analyzes errors\n- analyze.* events: Data analyst agent extracts insights\n\nNew endpoints:\n- POST /publish/error: Trigger error analysis agent\n- POST /publish/analyze: Trigger data analysis agent\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git commit:*)",
+      "Bash(pnpm add:*)",
+      "Bash(pnpm --filter @mcpe/core build:*)",
+      "Bash(fly logs:*)",
+      "Bash(fly scale count:*)",
+      "Bash(fly status:*)",
+      "Bash(pnpm --filter agent-server build:*)",
+      "Bash(git status:*)",
+      "Bash(timeout 5 node:*)",
+      "Bash(node -e:*)",
+      "Bash(pnpm --filter @mcpe/agent-server build:*)",
+      "Bash(npm install:*)",
+      "Bash(npx tsc:*)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:docs.polymarket.com)",
+      "Bash(npm run build:*)",
+      "Bash(timeout 5 npm start:*)",
+      "Bash(fly launch:*)",
+      "WebFetch(domain:mcpservers.org)"
     ]
   }
 }
