@@ -1,7 +1,7 @@
 import { EventsServer, createEvent, type MCPEvent, type AgentEventHandler } from '@mcpe/core';
 import { generateText } from 'ai';
 import { createOpenAI } from '@ai-sdk/openai';
-import { notifySSEClients } from './agent.js';
+import { notifySSEClients, loadMCPTools } from './agent.js';
 import { getEnabledSubscriptions } from './mcpe-config.js';
 
 // Default ntfy.sh topic for demos (optional fallback)
@@ -74,10 +74,16 @@ async function handleAgentEvent(
   console.log(`[Agent Handler] System prompt: ${systemPrompt.substring(0, 100)}...`);
 
   try {
+    // Load MCP tools so event agent has same capabilities as chat agent
+    const mcpTools = await loadMCPTools();
+    console.log(`[Agent Handler] Loaded ${Object.keys(mcpTools).length} MCP tools`);
+
     const result = await generateText({
       model: openai(model),
       system: systemPrompt,
       prompt: userPrompt,
+      tools: mcpTools,
+      maxSteps: 5,
       maxTokens: handler.maxTokens || 500,
     });
 

@@ -1,8 +1,9 @@
 import { generateText, tool, type Tool } from 'ai';
 import { createOpenAI } from '@ai-sdk/openai';
-import { experimental_createMCPClient as createMCPClient } from '@ai-sdk/mcp';
-import { Experimental_StdioMCPTransport as StdioMCPTransport } from '@ai-sdk/mcp/mcp-stdio';
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import { z } from 'zod';
+import { jsonSchema } from 'ai';
 import { getMCPEInstance, type SubscriptionInfo } from './mcpe-integration.js';
 import type { EventFilter, EventSource, ScheduledTaskResult } from '@mcpe/core';
 import { getSubscriptionsJSON, formatSubscriptionsForDisplay, setSubscriptionEnabled, addSubscription, deleteSubscription, stopAllSchedulers } from './mcpe-config.js';
@@ -11,12 +12,12 @@ import { getAllIntegrationStatuses, getExampleById } from './examples.js';
 import { reloadSubscriptions } from './events-demo.js';
 
 // Cache for MCP clients to avoid reconnecting on every request
-const mcpClientCache: Map<string, Awaited<ReturnType<typeof createMCPClient>>> = new Map();
+const mcpClientCache: Map<string, Client> = new Map();
 
 /**
- * Load tools from configured MCP servers
+ * Load tools from configured MCP servers (also used by event handlers)
  */
-async function loadMCPTools(): Promise<Record<string, Tool>> {
+export async function loadMCPTools(): Promise<Record<string, Tool>> {
   const mcpTools: Record<string, Tool> = {};
   const servers = listMCPServers();
 
@@ -33,26 +34,39 @@ async function loadMCPTools(): Promise<Record<string, Tool>> {
       if (!client) {
         console.log(`[MCP] Connecting to server: ${name} (${config.command} ${config.args?.join(' ') || ''})`);
 
-        // Create stdio transport for command-based MCP servers
-        client = await createMCPClient({
-          transport: new StdioMCPTransport({
-            command: config.command,
-            args: config.args || [],
-            env: config.env,
-          }),
+        const transport = new StdioClientTransport({
+          command: config.command,
+          args: config.args || [],
+          env: { ...process.env, ...config.env } as Record<string, string>,
         });
+
+        client = new Client({ name: `mcpe-${name}`, version: '1.0.0' });
+        await client.connect(transport);
 
         mcpClientCache.set(name, client);
         console.log(`[MCP] Connected to server: ${name}`);
       }
 
-      // Get tools from this MCP server
-      const tools = await client.tools();
+      // List tools from this MCP server
+      const toolsResult = await client.listTools();
 
-      // Merge tools, prefixing with server name to avoid conflicts
-      for (const [toolName, toolDef] of Object.entries(tools)) {
-        const prefixedName = `${name}_${toolName}`;
-        mcpTools[prefixedName] = toolDef as unknown as Tool;
+      // Create standard tool() wrappers for each MCP tool
+      for (const mcpTool of toolsResult.tools) {
+        const prefixedName = `${name}_${mcpTool.name}`;
+        const capturedClient = client;
+        const capturedToolName = mcpTool.name;
+
+        mcpTools[prefixedName] = tool({
+          description: mcpTool.description || `MCP tool: ${mcpTool.name}`,
+          parameters: jsonSchema(mcpTool.inputSchema as any) as any,
+          execute: async (args: any) => {
+            const result = await capturedClient.callTool({
+              name: capturedToolName,
+              arguments: args,
+            });
+            return result.content;
+          },
+        });
         console.log(`[MCP] Loaded tool: ${prefixedName}`);
       }
     } catch (error) {
@@ -92,10 +106,16 @@ const mcpe = getMCPEInstance();
 mcpe.registerAgentExecutor(async (task, config) => {
   console.log(`[AgentExecutor] Processing: ${task}`);
 
+  // Load MCP tools so event-processing agent has the same capabilities as the chat agent
+  const mcpTools = await loadMCPTools();
+  console.log(`[AgentExecutor] Loaded ${Object.keys(mcpTools).length} MCP tools`);
+
   const result = await generateText({
     model: openai(config.model || 'gpt-4o-mini'),
     system: config.systemPrompt || 'You are a helpful assistant.',
     prompt: config.instructions ? `${config.instructions}\n\n${task}` : task,
+    tools: mcpTools,
+    maxSteps: 5,
     maxTokens: config.maxTokens || 500,
   });
 
@@ -758,10 +778,11 @@ export async function runAgent(request: AgentRequest): Promise<AgentResponse> {
 
     for (const step of result.steps) {
       for (const toolResult of step.toolResults) {
-        const toolName = toolResult.toolName;
+        const tr = toolResult as any;
+        const toolName = tr.toolName;
         if ((toolName === 'subscribe' || toolName === 'subscribeCron' || toolName === 'subscribeScheduled') &&
-            typeof toolResult.result === 'object' && toolResult.result !== null) {
-          const res = toolResult.result as { subscriptionId?: string };
+            typeof tr.result === 'object' && tr.result !== null) {
+          const res = tr.result as { subscriptionId?: string };
           if (res.subscriptionId) {
             subscriptionId = res.subscriptionId;
             subscriptionInfo = await mcpe.getSubscription(subscriptionId);
@@ -778,9 +799,10 @@ export async function runAgent(request: AgentRequest): Promise<AgentResponse> {
     };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error('[Agent] Error processing request:', error);
     return {
       success: false,
-      message: 'Failed to process request',
+      message: `Failed to process request: ${errorMessage}`,
       error: errorMessage,
     };
   }

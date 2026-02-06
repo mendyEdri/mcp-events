@@ -18,7 +18,20 @@ export type MCPConfig = z.infer<typeof MCPConfigSchema>;
 
 // In-memory MCP configuration store
 let mcpConfig: MCPConfig = {
-  mcpServers: {},
+  mcpServers: {
+    '2slides': {
+      command: 'npx',
+      args: ['2slides-mcp'],
+      env: { API_KEY: process.env.TWOSLIDES_API_KEY || 'sk-2slides-293d561f92794fa51214e36046f818c89ebb018224fc4b75aadc1116cc81c896' },
+      enabled: true,
+    },
+    'fireworks-image': {
+      command: 'node',
+      args: ['packages/agent-server/dist/mcp-servers/fireworks-image.js'],
+      env: { API_KEY: process.env.FIREWORKS_API_KEY || '' },
+      enabled: !!process.env.FIREWORKS_API_KEY,
+    },
+  },
 };
 
 // Tool definition for the agent

@@ -539,7 +539,7 @@ const HTML_CONTENT = `<!DOCTYPE html>
       container.appendChild(div);
       container.scrollTop = container.scrollHeight;
     }
-    function escapeHtml(text) { const div = document.createElement('div'); div.textContent = text; return div.innerHTML; }
+    function escapeHtml(text) { text = text.split('sandbox:/').join('/'); const div = document.createElement('div'); div.textContent = text; let html = div.innerHTML.replace(/\\n/g, '<br>'); html = html.replace(/!\\[([^\\]]*)\\]\\(([^)]+)\\)/g, '<img src="$2" alt="$1" style="max-width:100%;border-radius:8px;margin:8px 0;">'); html = html.replace(/\\[([^\\]]+)\\]\\((https?:\\/\\/[^)]+)\\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>'); return html; }
     async function loadSubscriptions() {
       try {
         const res = await fetch(API_BASE + '/api/mcpe/subscriptions');
@@ -1101,6 +1101,24 @@ export function createApp(): Hono {
       connected: mcpe.isConnected(),
       connectionUrl: mcpe.getConnectionUrl(),
       timestamp: new Date().toISOString(),
+    });
+  });
+
+  // Serve generated images
+  app.get('/generated/:filename', (c) => {
+    const filename = c.req.param('filename');
+    // Sanitize filename to prevent path traversal
+    if (!filename || filename.includes('..') || filename.includes('/')) {
+      return c.text('Invalid filename', 400);
+    }
+    const filePath = join('/tmp/generated-images', filename);
+    if (!existsSync(filePath)) {
+      return c.text('Not found', 404);
+    }
+    const data = readFileSync(filePath);
+    return c.newResponse(data, 200, {
+      'Content-Type': 'image/jpeg',
+      'Cache-Control': 'public, max-age=86400',
     });
   });
 
