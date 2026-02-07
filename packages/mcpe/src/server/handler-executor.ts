@@ -1,12 +1,18 @@
-import { spawn } from 'child_process';
-import type { MCPEvent, EventHandler, BashEventHandler, WebhookEventHandler, AgentEventHandler } from '../types/index.js';
+import { spawn, type ChildProcess } from 'child_process';
+import type {
+  MCPEvent,
+  EventHandler,
+  BashHandlerArgs,
+  WebhookHandlerArgs,
+} from '../types/index.js';
+import { isBashHandler, isWebhookHandler, isAgentHandler } from '../types/index.js';
 
 /**
  * Result of executing a handler
  */
 export interface HandlerResult {
   success: boolean;
-  handlerType: 'bash' | 'webhook' | 'agent';
+  handlerType: string;
   /** Output from bash command or webhook response */
   output?: string;
   /** Error message if failed */
@@ -20,9 +26,18 @@ export interface HandlerResult {
  */
 export type AgentHandlerCallback = (
   event: MCPEvent,
-  handler: AgentEventHandler,
+  handler: EventHandler,
   subscriptionId: string
 ) => Promise<void>;
+
+/**
+ * Callback for custom handlers - implementers can register their own handler types
+ */
+export type CustomHandlerCallback = (
+  event: MCPEvent,
+  handler: EventHandler,
+  subscriptionId: string
+) => Promise<{ output?: string }>;
 
 /**
  * Handler executor configuration
@@ -30,12 +45,18 @@ export type AgentHandlerCallback = (
 export interface HandlerExecutorConfig {
   /** Callback for agent handlers (required if using agent handlers) */
   onAgentHandler?: AgentHandlerCallback;
+  /** Registry of custom handler callbacks by type */
+  customHandlers?: Record<string, CustomHandlerCallback>;
   /** Default timeout for handlers in ms */
   defaultTimeout?: number;
 }
 
 /**
- * Executes event handlers (webhook, bash, agent)
+ * Executes event handlers (webhook, bash, agent, or custom)
+ *
+ * Supports the open handler schema where handlers have `type` + `args`.
+ * Built-in types: "bash", "agent", "webhook"
+ * Custom types: Registered via customHandlers config
  */
 export class HandlerExecutor {
   private config: HandlerExecutorConfig;
@@ -45,6 +66,14 @@ export class HandlerExecutor {
       defaultTimeout: 30000,
       ...config,
     };
+  }
+
+  /**
+   * Register a custom handler type
+   */
+  registerHandler(type: string, callback: CustomHandlerCallback): void {
+    this.config.customHandlers = this.config.customHandlers || {};
+    this.config.customHandlers[type] = callback;
   }
 
   /**
@@ -58,21 +87,30 @@ export class HandlerExecutor {
     const startTime = Date.now();
 
     try {
-      switch (handler.type) {
-        case 'webhook':
-          return await this.executeWebhook(event, handler, startTime);
-        case 'bash':
-          return await this.executeBash(event, handler, startTime);
-        case 'agent':
-          return await this.executeAgent(event, handler, subscriptionId, startTime);
-        default:
-          return {
-            success: false,
-            handlerType: (handler as any).type,
-            error: `Unknown handler type: ${(handler as any).type}`,
-            durationMs: Date.now() - startTime,
-          };
+      // Built-in handler types
+      if (isWebhookHandler(handler)) {
+        return await this.executeWebhook(event, handler.args || {}, startTime);
       }
+      if (isBashHandler(handler)) {
+        return await this.executeBash(event, handler.args || {}, startTime);
+      }
+      if (isAgentHandler(handler)) {
+        return await this.executeAgent(event, handler, subscriptionId, startTime);
+      }
+
+      // Check for custom handler
+      const customHandler = this.config.customHandlers?.[handler.type];
+      if (customHandler) {
+        return await this.executeCustom(event, handler, subscriptionId, customHandler, startTime);
+      }
+
+      // Unknown handler type
+      return {
+        success: false,
+        handlerType: handler.type,
+        error: `Unknown handler type: ${handler.type}. Register custom handlers via HandlerExecutor.registerHandler()`,
+        durationMs: Date.now() - startTime,
+      };
     } catch (error) {
       return {
         success: false,
@@ -88,20 +126,29 @@ export class HandlerExecutor {
    */
   private async executeWebhook(
     event: MCPEvent,
-    handler: WebhookEventHandler,
+    args: Partial<WebhookHandlerArgs>,
     startTime: number
   ): Promise<HandlerResult> {
-    const timeout = handler.timeout ?? this.config.defaultTimeout!;
+    if (!args.url) {
+      return {
+        success: false,
+        handlerType: 'webhook',
+        error: 'Webhook handler requires "url" in args',
+        durationMs: Date.now() - startTime,
+      };
+    }
+
+    const timeout = args.timeout ?? this.config.defaultTimeout!;
 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeout);
 
     try {
-      const response = await fetch(handler.url, {
+      const response = await fetch(args.url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...handler.headers,
+          ...args.headers,
         },
         body: JSON.stringify({
           event,
@@ -151,15 +198,24 @@ export class HandlerExecutor {
    */
   private async executeBash(
     event: MCPEvent,
-    handler: BashEventHandler,
+    args: Partial<BashHandlerArgs>,
     startTime: number
   ): Promise<HandlerResult> {
-    const timeout = handler.timeout ?? this.config.defaultTimeout!;
+    if (!args.command) {
+      return {
+        success: false,
+        handlerType: 'bash',
+        error: 'Bash handler requires "command" in args',
+        durationMs: Date.now() - startTime,
+      };
+    }
+
+    const timeout = args.timeout ?? this.config.defaultTimeout!;
 
     return new Promise((resolve) => {
       const env: Record<string, string> = {
         ...process.env,
-        ...handler.env,
+        ...args.env,
         MCPE_EVENT_ID: event.id,
         MCPE_EVENT_TYPE: event.type,
         MCPE_EVENT_SOURCE: event.metadata.source,
@@ -174,15 +230,17 @@ export class HandlerExecutor {
         env.MCPE_EVENT_TAGS = event.metadata.tags.join(',');
       }
 
-      const args = handler.args ?? [];
+      const cmdArgs = args.args ?? [];
+      const input = args.input ?? 'stdin';
+      const command = args.command!;  // Already validated above
 
       // If input mode is 'args', append event JSON as last argument
-      const finalArgs = handler.input === 'args'
-        ? [...args, JSON.stringify(event)]
-        : args;
+      const finalArgs = input === 'args'
+        ? [...cmdArgs, JSON.stringify(event)]
+        : cmdArgs;
 
-      const child = spawn(handler.command, finalArgs, {
-        cwd: handler.cwd,
+      const child: ChildProcess = spawn(command, finalArgs, {
+        cwd: args.cwd,
         env,
         shell: true,
         timeout,
@@ -191,21 +249,21 @@ export class HandlerExecutor {
       let stdout = '';
       let stderr = '';
 
-      child.stdout?.on('data', (data) => {
+      child.stdout?.on('data', (data: Buffer) => {
         stdout += data.toString();
       });
 
-      child.stderr?.on('data', (data) => {
+      child.stderr?.on('data', (data: Buffer) => {
         stderr += data.toString();
       });
 
       // Send event JSON to stdin if input mode is 'stdin'
-      if (handler.input === 'stdin' || !handler.input) {
+      if (input === 'stdin') {
         child.stdin?.write(JSON.stringify(event));
         child.stdin?.end();
       }
 
-      child.on('close', (code) => {
+      child.on('close', (code: number | null) => {
         resolve({
           success: code === 0,
           handlerType: 'bash',
@@ -215,7 +273,7 @@ export class HandlerExecutor {
         });
       });
 
-      child.on('error', (error) => {
+      child.on('error', (error: Error) => {
         resolve({
           success: false,
           handlerType: 'bash',
@@ -231,7 +289,7 @@ export class HandlerExecutor {
    */
   private async executeAgent(
     event: MCPEvent,
-    handler: AgentEventHandler,
+    handler: EventHandler,
     subscriptionId: string,
     startTime: number
   ): Promise<HandlerResult> {
@@ -256,6 +314,34 @@ export class HandlerExecutor {
       return {
         success: false,
         handlerType: 'agent',
+        error: error instanceof Error ? error.message : String(error),
+        durationMs: Date.now() - startTime,
+      };
+    }
+  }
+
+  /**
+   * Execute a custom handler
+   */
+  private async executeCustom(
+    event: MCPEvent,
+    handler: EventHandler,
+    subscriptionId: string,
+    callback: CustomHandlerCallback,
+    startTime: number
+  ): Promise<HandlerResult> {
+    try {
+      const result = await callback(event, handler, subscriptionId);
+      return {
+        success: true,
+        handlerType: handler.type,
+        output: result.output,
+        durationMs: Date.now() - startTime,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        handlerType: handler.type,
         error: error instanceof Error ? error.message : String(error),
         durationMs: Date.now() - startTime,
       };

@@ -189,38 +189,20 @@ Create a new event subscription.
         required: ["channels"]
       },
       handler: {
-        description: "Optional handler to process events",
-        oneOf: [
-          {
-            type: "object",
-            properties: {
-              type: { const: "bash" },
-              command: { type: "string" },
-              args: { type: "array", items: { type: "string" } },
-              input: { enum: ["stdin", "env", "args"] }
-            },
-            required: ["type", "command"]
+        description: "Optional handler to process events (follows MCP tool pattern)",
+        type: "object",
+        properties: {
+          type: {
+            type: "string",
+            description: "Handler type: 'bash', 'agent', 'webhook', or custom"
           },
-          {
+          args: {
             type: "object",
-            properties: {
-              type: { const: "agent" },
-              systemPrompt: { type: "string" },
-              model: { type: "string" },
-              tools: { type: "array", items: { type: "string" } }
-            },
-            required: ["type"]
-          },
-          {
-            type: "object",
-            properties: {
-              type: { const: "webhook" },
-              url: { type: "string", format: "uri" },
-              headers: { type: "object" }
-            },
-            required: ["type", "url"]
+            additionalProperties: true,
+            description: "Handler-specific arguments (open schema)"
           }
-        ]
+        },
+        required: ["type"]
       },
       expiresAt: {
         type: "string",
@@ -645,7 +627,19 @@ await client.subscribe({
 
 ## Event Handlers
 
-Subscriptions can include handlers for automatic event processing:
+Subscriptions can include handlers for automatic event processing. Following MCP's `tools/call` pattern of `name` + `arguments`, handlers use `type` + `args`:
+
+```typescript
+interface EventHandler {
+  type: string;                           // Handler type
+  args?: { [key: string]: unknown };      // Handler-specific arguments (open schema)
+}
+```
+
+This open schema enables:
+- **Built-in types**: "bash", "agent", "webhook"
+- **Custom types**: Any string, validated by the handler implementation
+- **Extensibility**: New handler types without protocol changes
 
 ### Bash Handler
 
@@ -657,9 +651,11 @@ await client.subscribe({
   delivery: { channels: ["realtime"] },
   handler: {
     type: "bash",
-    command: "notify-send",
-    args: ["Critical Alert", "$MCPE_EVENT_TYPE"],
-    input: "env"  // Pass event data as environment variables
+    args: {
+      command: "notify-send",
+      args: ["Critical Alert", "$MCPE_EVENT_TYPE"],
+      input: "env"  // Pass event data as environment variables
+    }
   }
 });
 ```
@@ -674,9 +670,11 @@ await client.subscribe({
   delivery: { channels: ["realtime"] },
   handler: {
     type: "agent",
-    systemPrompt: "Summarize this Slack message and determine if it requires action.",
-    model: "claude-3-sonnet",
-    tools: ["slack_reply", "create_task"]
+    args: {
+      systemPrompt: "Summarize this Slack message and determine if it requires action.",
+      model: "claude-3-sonnet",
+      tools: ["slack_reply", "create_task"]
+    }
   }
 });
 ```
@@ -691,8 +689,36 @@ await client.subscribe({
   delivery: { channels: ["realtime"] },
   handler: {
     type: "webhook",
-    url: "https://api.example.com/events",
-    headers: { "Authorization": "Bearer ${WEBHOOK_TOKEN}" }
+    args: {
+      url: "https://api.example.com/events",
+      headers: { "Authorization": "Bearer ${WEBHOOK_TOKEN}" }
+    }
+  }
+});
+```
+
+### Custom Handler
+
+Register and use custom handler types.
+
+```typescript
+// Server-side: Register custom handler
+server.handlerExecutor.registerHandler("slack-notify", async (event, handler) => {
+  const { channel, template } = handler.args;
+  await slackClient.postMessage(channel, formatTemplate(template, event));
+  return { output: "Notification sent" };
+});
+
+// Client-side: Use custom handler
+await client.subscribe({
+  filter: { eventTypes: ["deploy.*"] },
+  delivery: { channels: ["realtime"] },
+  handler: {
+    type: "slack-notify",
+    args: {
+      channel: "#deployments",
+      template: "Deploy {{event.data.service}}: {{event.data.status}}"
+    }
   }
 });
 ```
@@ -843,11 +869,14 @@ interface ScheduledDelivery {
   autoExpire?: boolean;
 }
 
-// Handler types
-type EventHandler = BashHandler | AgentHandler | WebhookHandler;
+// Handler types (open schema following MCP tool pattern)
+interface EventHandler {
+  type: string;                           // "bash", "agent", "webhook", or custom
+  args?: { [key: string]: unknown };      // Handler-specific arguments
+}
 
-interface BashHandler {
-  type: "bash";
+// Well-known handler args (for documentation, not enforced by schema)
+interface BashHandlerArgs {
   command: string;
   args?: string[];
   cwd?: string;
@@ -856,8 +885,7 @@ interface BashHandler {
   timeout?: number;
 }
 
-interface AgentHandler {
-  type: "agent";
+interface AgentHandlerArgs {
   systemPrompt?: string;
   model?: string;
   instructions?: string;
@@ -865,8 +893,7 @@ interface AgentHandler {
   maxTokens?: number;
 }
 
-interface WebhookHandler {
-  type: "webhook";
+interface WebhookHandlerArgs {
   url: string;
   headers?: Record<string, string>;
   timeout?: number;

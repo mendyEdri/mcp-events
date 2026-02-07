@@ -16,15 +16,24 @@ export {
 
 // Subscription types
 export {
-  // Event handlers
+  // Event handlers (simplified open schema)
+  EventHandlerSchema,
+  type EventHandler,
+  // Handler args interfaces
+  type BashHandlerArgs,
+  type AgentHandlerArgs,
+  type WebhookHandlerArgs,
+  // Type guards
+  isBashHandler,
+  isAgentHandler,
+  isWebhookHandler,
+  // Legacy type aliases (deprecated)
   BashEventHandlerSchema,
   AgentEventHandlerSchema,
   WebhookEventHandlerSchema,
-  EventHandlerSchema,
   type BashEventHandler,
   type AgentEventHandler,
   type WebhookEventHandler,
-  type EventHandler,
   // Delivery
   DeliveryChannelSchema,
   CronScheduleSchema,
