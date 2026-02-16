@@ -1,0 +1,198 @@
+---
+title: Events
+description: Event structure, metadata, filtering, and wildcard matching.
+---
+
+## Event Structure
+
+Every MCPE event follows a standardized structure:
+
+```typescript
+interface MCPEvent {
+  id: string;                        // Unique event ID (UUID)
+  type: string;                      // Hierarchical type (e.g., "github.issue.opened")
+  data: Record<string, unknown>;     // Event-specific payload
+  metadata: EventMetadata;
+}
+
+interface EventMetadata {
+  source: string;                    // Origin system ("github", "slack", etc.)
+  sourceEventId?: string;            // Original event ID from the source
+  timestamp: string;                 // ISO 8601 timestamp
+  priority: "low" | "normal" | "high" | "critical";
+  tags?: string[];                   // Optional categorization tags
+}
+```
+
+### Example Event
+
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "type": "github.issue.opened",
+  "data": {
+    "title": "Bug report: login page crash",
+    "repo": "org/frontend",
+    "number": 123,
+    "author": "user123"
+  },
+  "metadata": {
+    "source": "github",
+    "sourceEventId": "gh-evt-789",
+    "timestamp": "2025-01-15T10:30:00Z",
+    "priority": "high",
+    "tags": ["bug", "frontend"]
+  }
+}
+```
+
+## Event Types
+
+Event types use a **hierarchical dot-notation** format: `source.category.action`.
+
+| Type | Meaning |
+|------|---------|
+| `github.push` | Code push to a repository |
+| `github.issue.opened` | New issue opened |
+| `github.issue.commented` | Comment on an issue |
+| `github.pull_request.merged` | PR merged |
+| `slack.message` | New Slack message |
+| `gmail.received` | New email received |
+| `deployment.started` | Deployment began |
+| `deployment.failed` | Deployment failed |
+
+The hierarchy allows wildcard filtering — see below.
+
+## Event Filtering
+
+Subscriptions use `EventFilter` to specify which events they want to receive:
+
+```typescript
+interface EventFilter {
+  sources?: string[];      // Filter by event source
+  eventTypes?: string[];   // Filter by type (supports wildcards)
+  tags?: string[];         // Filter by tags (OR logic)
+  priority?: Array<"low" | "normal" | "high" | "critical">;
+}
+```
+
+### Filter Logic
+
+| Filter | Matching Rule |
+|--------|--------------|
+| `sources` | Event source must be in the list |
+| `eventTypes` | Event type must match (exact or wildcard) |
+| `tags` | At least one tag must match (OR) |
+| `priority` | Event priority must be in the list |
+| Combined | All specified filters must match (AND) |
+
+Omitted filters match everything. An empty filter `{}` matches all events.
+
+### Examples
+
+```typescript
+// High-priority GitHub events only
+{
+  sources: ["github"],
+  priority: ["high", "critical"]
+}
+
+// GitHub and Slack events tagged with "ci" or "deploy"
+{
+  sources: ["github", "slack"],
+  tags: ["ci", "deploy"]
+}
+
+// All issue events from any source
+{
+  eventTypes: ["*.issue.*"]
+}
+```
+
+## Wildcard Matching
+
+MCPE supports glob-style wildcards in `eventTypes`:
+
+| Pattern | Matches | Does Not Match |
+|---------|---------|----------------|
+| `github.*` | `github.push`, `github.star` | `github.issue.opened` |
+| `github.issue.*` | `github.issue.opened`, `github.issue.closed` | `github.push` |
+| `*.push` | `github.push`, `gitlab.push` | `github.issue.opened` |
+| `*` | Everything | — |
+
+<Note>
+  `*` matches a single segment. `github.*` matches `github.push` but not `github.issue.opened`. Use `github.issue.*` to match all issue sub-events.
+</Note>
+
+The `matchesFilter` utility function handles all matching logic:
+
+```typescript
+import { matchesFilter } from "@mcpe/core";
+
+const event = {
+  id: "...",
+  type: "github.issue.opened",
+  data: { title: "Bug" },
+  metadata: { source: "github", priority: "high", timestamp: "..." },
+};
+
+const filter = {
+  sources: ["github"],
+  eventTypes: ["github.issue.*"],
+  priority: ["high", "critical"],
+};
+
+matchesFilter(event, filter); // true
+```
+
+## Creating Events
+
+Use the `createEvent` helper to generate events with auto-generated IDs and timestamps:
+
+```typescript
+import { createEvent } from "@mcpe/core";
+
+const event = createEvent(
+  "github.push",
+  { repo: "org/repo", branch: "main", commits: 3 },
+  { source: "github", priority: "normal", tags: ["ci"] }
+);
+// event.id = auto-generated UUID
+// event.metadata.timestamp = auto-generated ISO timestamp
+```
+
+## Priority Levels
+
+| Priority | Use Case |
+|----------|----------|
+| `low` | Informational, non-urgent (e.g., star events) |
+| `normal` | Standard events (default) |
+| `high` | Important events requiring attention (e.g., new issues) |
+| `critical` | Urgent events requiring immediate action (e.g., security alerts) |
+
+Priority is used for both filtering and delivery ordering. Realtime delivery sends all priorities immediately; cron/scheduled delivery can aggregate by priority.
+
+## Batch Events
+
+For cron and scheduled delivery, events are delivered in batches:
+
+```json
+{
+  "method": "events/batch",
+  "params": {
+    "subscriptionId": "sub_123",
+    "events": [
+      { "id": "...", "type": "github.push", "data": {...}, "metadata": {...} },
+      { "id": "...", "type": "github.push", "data": {...}, "metadata": {...} }
+    ]
+  }
+}
+```
+
+Handle batch events with `client.onBatch()`:
+
+```typescript
+client.onBatch((events, subscriptionId) => {
+  console.log(`Received ${events.length} events for ${subscriptionId}`);
+});
+```

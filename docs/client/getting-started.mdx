@@ -1,0 +1,187 @@
+---
+title: Getting Started
+sidebarTitle: Getting Started
+description: Set up an EventsClient to subscribe to events from an MCPE server.
+---
+
+## Installation
+
+```bash
+npm install @mcpe/core @modelcontextprotocol/sdk
+```
+
+## Basic Setup
+
+`EventsClient` wraps a standard MCP `Client` with event subscription capabilities.
+
+```typescript
+import { EventsClient } from "@mcpe/core";
+import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+
+const client = new EventsClient({
+  name: "my-agent",
+  version: "1.0.0",
+});
+
+await client.connect(
+  new StdioClientTransport({
+    command: "node",
+    args: ["./my-events-server.js"],
+  })
+);
+```
+
+## Constructor Options
+
+`EventsClient` accepts two constructor signatures:
+
+### Config Object
+
+```typescript
+const client = new EventsClient({
+  name: "my-agent",
+  version: "1.0.0",
+});
+```
+
+### Existing MCP Client
+
+Wrap an existing MCP `Client`:
+
+```typescript
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+
+const mcpClient = new Client(
+  { name: "my-agent", version: "1.0.0" },
+  { capabilities: {} }
+);
+
+const client = new EventsClient(mcpClient);
+```
+
+## Checking for Events Support
+
+After connecting, verify that the server supports MCPE:
+
+```typescript
+if (client.supportsEvents()) {
+  // Server has events capability — safe to subscribe
+} else {
+  console.log("This server does not support events");
+}
+```
+
+## Subscribing to Events
+
+```typescript
+const sub = await client.subscribe({
+  filter: {
+    sources: ["github"],
+    eventTypes: ["github.push", "github.issue.*"],
+    priority: ["high", "critical"],
+  },
+  delivery: { channels: ["realtime"] },
+});
+
+console.log("Subscribed:", sub.subscriptionId);
+```
+
+## Handling Events
+
+Register handlers using pattern matching:
+
+```typescript
+// Handle all GitHub events
+client.onEvent("github.*", (event, subscriptionId) => {
+  console.log(`[${subscriptionId}] ${event.type}:`, event.data);
+});
+
+// Handle specific event types
+client.onEvent("github.issue.opened", (event) => {
+  console.log("New issue:", event.data.title);
+});
+
+// Handle batch deliveries (cron/scheduled)
+client.onBatch((events, subscriptionId) => {
+  console.log(`Batch of ${events.length} events`);
+});
+
+// Handle subscription expiration
+client.onSubscriptionExpired((subscriptionId) => {
+  console.log(`Subscription ${subscriptionId} expired`);
+});
+```
+
+## Lifecycle Management
+
+```typescript
+// Pause — stop receiving events temporarily
+await client.pause(sub.subscriptionId);
+
+// Resume — start receiving again
+await client.resume(sub.subscriptionId);
+
+// Update — modify the subscription
+await client.update(sub.subscriptionId, {
+  filter: { priority: ["critical"] },
+});
+
+// List — see all subscriptions
+const result = await client.listSubscriptions("active");
+
+// Unsubscribe — remove completely
+await client.unsubscribe(sub.subscriptionId);
+```
+
+## Disconnecting
+
+```typescript
+await client.close();
+```
+
+## Full Example
+
+```typescript
+import { EventsClient } from "@mcpe/core";
+import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+
+const client = new EventsClient({ name: "monitor-agent", version: "1.0.0" });
+
+await client.connect(
+  new StdioClientTransport({
+    command: "node",
+    args: ["./events-server.js"],
+  })
+);
+
+if (!client.supportsEvents()) {
+  console.error("Server does not support events");
+  process.exit(1);
+}
+
+// Subscribe to critical alerts
+const sub = await client.subscribe({
+  filter: {
+    sources: ["github", "slack"],
+    priority: ["critical"],
+  },
+  delivery: { channels: ["realtime"] },
+});
+
+// React to events
+client.onEvent("*", async (event) => {
+  console.log(`[${event.metadata.priority}] ${event.type}:`, event.data);
+});
+
+// Clean up on exit
+process.on("SIGINT", async () => {
+  await client.unsubscribe(sub.subscriptionId);
+  await client.close();
+});
+```
+
+## Next Steps
+
+- [Subscribing](/client/subscribing) — Filter patterns and delivery options
+- [Event Handlers](/client/event-handlers) — Bash, webhook, and agent handlers
+- [Scheduling](/client/scheduling) — Client-side cron and timers

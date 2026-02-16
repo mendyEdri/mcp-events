@@ -1,0 +1,152 @@
+---
+title: Client-Side Scheduling
+description: Local cron and timer scheduling with the EventsClient.
+---
+
+In addition to server-side cron/scheduled delivery, `EventsClient` provides **client-side scheduling** via the built-in `ClientScheduler`. This is useful when you want to batch events locally before processing them.
+
+## Local Cron Scheduling
+
+Subscribe to events in realtime, but process them on a local cron schedule:
+
+```typescript
+await client.subscribeWithLocalCron(
+  { sources: ["github"], eventTypes: ["github.*"] },
+  {
+    expression: "0 9 * * *",        // Daily at 9 AM
+    timezone: "America/New_York",
+    maxEvents: 1000,
+  },
+  (events) => {
+    console.log(`Daily digest: ${events.length} GitHub events`);
+    for (const event of events) {
+      console.log(`  - ${event.type}: ${JSON.stringify(event.data)}`);
+    }
+  }
+);
+```
+
+### How It Works
+
+1. Creates a realtime subscription on the server
+2. Queues incoming events locally
+3. On each cron tick, calls your handler with all queued events
+4. Clears the queue after delivery
+
+### LocalCronConfig
+
+```typescript
+interface LocalCronConfig {
+  expression: string;    // Cron expression
+  timezone?: string;     // IANA timezone (default: "UTC")
+  maxEvents?: number;    // Max events to queue (default: 1000)
+}
+```
+
+## Local Timer Scheduling
+
+Subscribe to events and process them after a delay:
+
+```typescript
+await client.subscribeWithLocalTimer(
+  { sources: ["slack"] },
+  {
+    delayMs: 60 * 60 * 1000,  // 1 hour
+    maxEvents: 500,
+  },
+  (events) => {
+    console.log(`Received ${events.length} Slack events in the last hour`);
+  }
+);
+```
+
+### LocalTimerConfig
+
+```typescript
+interface LocalTimerConfig {
+  delayMs: number;       // Delay in milliseconds
+  maxEvents?: number;    // Max events to queue (default: 1000)
+}
+```
+
+The timer fires once after the delay. After that, the subscription continues but events are no longer queued.
+
+## Delayed Tasks
+
+Schedule a one-time task with a callback:
+
+```typescript
+const task = await client.scheduleDelayedTask(
+  "Send follow-up email",
+  30 * 60 * 1000,  // 30 minutes
+  (taskDescription, metadata) => {
+    console.log(`Task: ${taskDescription}`);
+    console.log(`Scheduled at: ${metadata.scheduledAt}`);
+    console.log(`Delivered at: ${metadata.deliveredAt}`);
+  }
+);
+
+console.log(`Task scheduled for: ${task.scheduledFor}`);
+```
+
+## Managing Local Schedulers
+
+### Check Active Jobs
+
+```typescript
+const info = client.getSchedulerInfo();
+for (const job of info.activeJobs) {
+  console.log(
+    `${job.subscriptionId}: ${job.type}, ` +
+    `pending: ${job.pendingEvents}, ` +
+    `next: ${job.nextRun}`
+  );
+}
+```
+
+### Stop a Scheduler
+
+```typescript
+client.stopLocalScheduler(subscriptionId);
+```
+
+### Stop All Schedulers
+
+```typescript
+client.stopAllLocalSchedulers();
+```
+
+## Server-Side vs Client-Side Scheduling
+
+| Feature | Server-Side | Client-Side |
+|---------|-------------|-------------|
+| Cron scheduling | `delivery: { channels: ["cron"] }` | `subscribeWithLocalCron()` |
+| One-time delay | `delivery: { channels: ["scheduled"] }` | `subscribeWithLocalTimer()` |
+| Events stored | On server | In client memory |
+| Works when disconnected | Yes (server queues) | No (client must be running) |
+| Processing location | Server handler | Client callback |
+
+**Use server-side** when the client may disconnect and you want guaranteed delivery.
+
+**Use client-side** when you want to process events locally and the client stays connected.
+
+## Example: Daily Digest Agent
+
+```typescript
+const client = new EventsClient({ name: "digest-agent", version: "1.0.0" });
+await client.connect(transport);
+
+// Collect all events and deliver a daily summary
+await client.subscribeWithLocalCron(
+  { sources: ["github", "slack"] },
+  { expression: "0 17 * * 1-5", timezone: "America/New_York" },
+  async (events) => {
+    const summary = events
+      .map((e) => `[${e.metadata.source}] ${e.type}: ${JSON.stringify(e.data)}`)
+      .join("\n");
+
+    console.log(`=== End of Day Digest (${events.length} events) ===`);
+    console.log(summary);
+  }
+);
+```

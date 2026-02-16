@@ -8,26 +8,80 @@
     "light": "#60A5FA",
     "dark": "#1D4ED8"
   },
+  "favicon": "/favicon.svg",
   "navigation": [
     {
       "group": "Introduction",
       "pages": [
         "introduction",
         "quickstart",
-        "protocol-overview"
+        "why-mcpe"
       ]
     },
     {
-      "group": "SDK",
+      "group": "Core Concepts",
       "pages": [
-        "sdk/client"
+        "concepts/protocol",
+        "concepts/events",
+        "concepts/subscriptions",
+        "concepts/transports"
+      ]
+    },
+    {
+      "group": "Server SDK",
+      "pages": [
+        "server/getting-started",
+        "server/publishing-events",
+        "server/delivery",
+        "server/configuration"
+      ]
+    },
+    {
+      "group": "Client SDK",
+      "pages": [
+        "client/getting-started",
+        "client/subscribing",
+        "client/event-handlers",
+        "client/scheduling"
+      ]
+    },
+    {
+      "group": "API Reference",
+      "pages": [
+        "api/server-api",
+        "api/client-api",
+        "api/types",
+        "api/protocol-methods"
       ]
     },
     {
       "group": "Guides",
       "pages": [
-        "website-integration"
+        "guides/mcp-integration",
+        "guides/examples"
+      ]
+    },
+    {
+      "group": "Specification",
+      "pages": [
+        "specification"
       ]
     }
-  ]
+  ],
+  "tabs": [
+    {
+      "name": "API Reference",
+      "url": "api"
+    }
+  ],
+  "anchors": [
+    {
+      "name": "GitHub",
+      "icon": "github",
+      "url": "https://github.com/anthropics/mcp-event"
+    }
+  ],
+  "footerSocials": {
+    "github": "https://github.com/anthropics/mcp-event"
+  }
 }

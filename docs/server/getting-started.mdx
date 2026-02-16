@@ -1,0 +1,151 @@
+---
+title: Getting Started
+sidebarTitle: Getting Started
+description: Set up an EventsServer to publish events to subscribed agents.
+---
+
+## Installation
+
+```bash
+npm install @mcpe/core @modelcontextprotocol/sdk
+```
+
+## Basic Setup
+
+`EventsServer` wraps a standard `McpServer` with event subscription capabilities. It automatically registers the MCPE tools and handles subscription management.
+
+```typescript
+import { EventsServer } from "@mcpe/core";
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+
+const server = new EventsServer({
+  name: "my-events-server",
+  version: "1.0.0",
+  events: {
+    supportedSources: ["github", "slack"],
+    maxSubscriptions: 100,
+    deliveryChannels: ["realtime", "cron", "scheduled"],
+    features: {
+      pause: true,
+      wildcards: true,
+      cronSchedule: true,
+      scheduledDelivery: true,
+    },
+  },
+});
+
+await server.connect(new StdioServerTransport());
+```
+
+## Constructor Options
+
+`EventsServer` accepts two constructor signatures:
+
+### Config Object
+
+```typescript
+const server = new EventsServer({
+  name: "my-server",
+  version: "1.0.0",
+  events: { /* EventsServerOptions */ },
+  handlers: { /* HandlerExecutorConfig */ },
+});
+```
+
+### Existing McpServer
+
+Wrap an existing `McpServer` that already has tools registered:
+
+```typescript
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+
+const mcpServer = new McpServer(
+  { name: "my-server", version: "1.0.0" },
+  { capabilities: {} }
+);
+
+// Add your own MCP tools first
+mcpServer.tool("my_tool", { /* schema */ }, async (args) => {
+  // ...
+});
+
+// Then wrap with events
+const server = new EventsServer(mcpServer, {
+  supportedSources: ["github"],
+  maxSubscriptions: 50,
+});
+```
+
+## What Happens on Construction
+
+When you create an `EventsServer`, it automatically:
+
+1. Creates (or wraps) a `McpServer` with events capability declared
+2. Registers six MCP tools: `events_subscribe`, `events_unsubscribe`, `events_list`, `events_pause`, `events_resume`, `events_update`
+3. Initializes a `SubscriptionManager` to track client subscriptions
+4. Initializes an `EventScheduler` for cron/scheduled delivery
+5. Initializes a `HandlerExecutor` for processing event handlers
+
+## Connecting
+
+Connect to any MCP transport:
+
+<CodeGroup>
+```typescript stdio
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+await server.connect(new StdioServerTransport());
+```
+
+```typescript WebSocket
+// Using standalone @esmcp/server for WebSocket
+import { EventHub } from "@esmcp/server";
+const hub = new EventHub({ port: 3000 });
+await hub.start();
+```
+</CodeGroup>
+
+## Publishing Events
+
+Once connected, publish events to all matching subscriptions:
+
+```typescript
+// Shorthand form
+await server.publish("github.push", { repo: "org/repo", branch: "main" }, {
+  source: "github",
+  priority: "normal",
+});
+
+// Full event object
+await server.publish({
+  id: crypto.randomUUID(),
+  type: "github.push",
+  data: { repo: "org/repo", branch: "main" },
+  metadata: {
+    source: "github",
+    timestamp: new Date().toISOString(),
+    priority: "normal",
+  },
+});
+```
+
+## Checking Status
+
+```typescript
+server.isConnected(); // true if transport is active
+
+// See scheduled delivery jobs
+const info = server.getSchedulerInfo();
+console.log(info.activeJobs);
+```
+
+## Shutting Down
+
+```typescript
+await server.close();
+```
+
+## Next Steps
+
+- [Publishing Events](/server/publishing-events) — Event routing and handler execution
+- [Delivery](/server/delivery) — Cron, scheduled, and realtime delivery modes
+- [Configuration](/server/configuration) — All options and capability settings
