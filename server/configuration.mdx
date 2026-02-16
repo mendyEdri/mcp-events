@@ -1,0 +1,157 @@
+---
+title: Configuration
+description: All EventsServer options, capabilities, and feature flags.
+---
+
+## EventsServerConfig
+
+The full configuration object for `EventsServer`:
+
+```typescript
+interface EventsServerConfig {
+  name: string;          // Server name (shown in MCP init)
+  version: string;       // Server version
+  events?: EventsServerOptions;
+  handlers?: HandlerExecutorConfig;
+}
+```
+
+## EventsServerOptions
+
+Controls what event features the server advertises and enforces:
+
+```typescript
+interface EventsServerOptions {
+  maxSubscriptions?: number;       // Default: 100
+  supportedSources?: string[];     // Default: ["github", "gmail", "slack", "custom"]
+  deliveryChannels?: string[];     // Default: ["realtime", "cron", "scheduled"]
+  features?: Partial<EventsFeatures>;
+}
+```
+
+### Example
+
+```typescript
+const server = new EventsServer({
+  name: "minimal-server",
+  version: "1.0.0",
+  events: {
+    maxSubscriptions: 10,
+    supportedSources: ["github"],
+    deliveryChannels: ["realtime"],
+    features: {
+      pause: true,
+      wildcards: true,
+      cronSchedule: false,
+      scheduledDelivery: false,
+    },
+  },
+});
+```
+
+## EventsFeatures
+
+Feature flags that control what the server supports:
+
+```typescript
+interface EventsFeatures {
+  pause: boolean;              // Pause/resume subscriptions (default: true)
+  wildcards: boolean;          // Wildcard event type matching (default: true)
+  cronSchedule: boolean;       // Cron-based delivery (default: true)
+  scheduledDelivery: boolean;  // One-time scheduled delivery (default: true)
+}
+```
+
+These flags are advertised to clients in the capability declaration and enforced when creating subscriptions.
+
+## Capability Object
+
+The resolved capability object is available on the server:
+
+```typescript
+const cap = server.capability;
+// {
+//   maxSubscriptions: 100,
+//   supportedSources: ["github", "gmail", "slack", "custom"],
+//   deliveryChannels: ["realtime", "cron", "scheduled"],
+//   features: { pause: true, wildcards: true, cronSchedule: true, scheduledDelivery: true }
+// }
+```
+
+### Default Capability
+
+```typescript
+const DEFAULT_EVENTS_CAPABILITY = {
+  maxSubscriptions: 100,
+  supportedSources: ["github", "gmail", "slack", "custom"],
+  deliveryChannels: ["realtime", "cron", "scheduled"],
+  features: {
+    pause: true,
+    wildcards: true,
+    cronSchedule: true,
+    scheduledDelivery: true,
+  },
+};
+```
+
+## Internal Components
+
+`EventsServer` exposes its internal components as public properties:
+
+```typescript
+server.mcpServer;             // The underlying McpServer
+server.subscriptionManager;   // SubscriptionManager instance
+server.handlerExecutor;       // HandlerExecutor instance
+server.scheduler;             // EventScheduler instance
+```
+
+### SubscriptionManager
+
+Handles CRUD operations and event matching:
+
+- Tracks subscriptions per client
+- Enforces `maxSubscriptions` limit
+- Matches events to subscriptions using `matchesFilter()`
+- Manages subscription status transitions
+
+### EventScheduler
+
+Manages cron and scheduled delivery jobs:
+
+- Creates cron jobs that fire on a schedule
+- Creates one-time scheduled delivery jobs
+- Queues events between deliveries
+- Automatically expires scheduled subscriptions
+
+### HandlerExecutor
+
+Processes event handlers (bash, webhook, agent):
+
+- Executes bash commands with event data
+- Sends HTTP webhooks
+- Delegates to LLM agents
+
+## Supported Sources
+
+The `supportedSources` option defines which event sources the server can handle. Common values:
+
+| Source | Description |
+|--------|-------------|
+| `"github"` | GitHub events (push, issue, PR, etc.) |
+| `"gmail"` | Email events |
+| `"slack"` | Slack messages and events |
+| `"custom"` | Application-defined events |
+
+Clients can only subscribe to sources the server supports. Subscribing to an unsupported source returns an error.
+
+## Error Handling
+
+The server returns standard JSON-RPC errors for invalid operations:
+
+| Error | When |
+|-------|------|
+| Subscription limit exceeded | Client exceeds `maxSubscriptions` |
+| Unsupported source | Filter includes source not in `supportedSources` |
+| Unsupported feature | Using cron when `cronSchedule` is false |
+| Subscription not found | Operating on non-existent subscription ID |
+| Invalid filter | Malformed filter object |

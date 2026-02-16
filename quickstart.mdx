@@ -1,0 +1,131 @@
+---
+title: Quickstart
+description: Get an MCPE server and client running in 5 minutes.
+---
+
+## Prerequisites
+
+- Node.js 18+
+- pnpm 8+
+
+## 1. Install and build
+
+```bash
+git clone https://github.com/anthropics/mcp-event.git
+cd mcp-event
+pnpm install
+pnpm build
+```
+
+## 2. Start the server
+
+<CodeGroup>
+```bash WebSocket Demo
+cd examples/webpush-demo
+npx tsx server-ws.ts
+```
+
+```bash SSE Demo
+cd examples/sse-demo
+npx tsx server.ts
+```
+</CodeGroup>
+
+## 3. Receive events
+
+In a separate terminal:
+
+```bash
+cd examples/webpush-demo
+npx tsx cli-receive.ts
+```
+
+## 4. Publish events
+
+In a third terminal:
+
+```bash
+cd examples/webpush-demo
+npx tsx cli-publish.ts github.push '{"repo":"test","commits":3}'
+```
+
+You should see the event appear in the receive terminal.
+
+## Using the SDK
+
+### Server
+
+```typescript
+import { EventsServer } from "@mcpe/core";
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+
+const server = new EventsServer({
+  name: "my-events-server",
+  version: "1.0.0",
+  events: {
+    supportedSources: ["github", "slack"],
+    maxSubscriptions: 100,
+    deliveryChannels: ["realtime", "cron", "scheduled"],
+  },
+});
+
+// Publish events from your data source
+server.publish("github.push", { repo: "org/repo", branch: "main" }, {
+  source: "github",
+  priority: "normal",
+});
+
+await server.connect(new StdioServerTransport());
+```
+
+### Client
+
+```typescript
+import { EventsClient } from "@mcpe/core";
+import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+
+const client = new EventsClient({ name: "my-agent", version: "1.0.0" });
+await client.connect(
+  new StdioClientTransport({ command: "node", args: ["./my-server.js"] })
+);
+
+// Subscribe to events
+const sub = await client.subscribe({
+  filter: {
+    sources: ["github"],
+    eventTypes: ["github.push", "github.pull_request.*"],
+    priority: ["high", "critical"],
+  },
+  delivery: { channels: ["realtime"] },
+});
+
+// Handle events
+client.onEvent("github.*", (event, subscriptionId) => {
+  console.log(`Received ${event.type}:`, event.data);
+});
+```
+
+## Preview docs locally
+
+```bash
+pnpm docs:dev
+```
+
+Requires Node.js 20.17.0+ for the Mintlify CLI.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Core Concepts" icon="book" href="/concepts/protocol">
+    Understand the protocol, events, and subscriptions in depth.
+  </Card>
+  <Card title="Server SDK" icon="server" href="/server/getting-started">
+    Learn how to build your own MCPE server.
+  </Card>
+  <Card title="Client SDK" icon="plug" href="/client/getting-started">
+    Build an agent that subscribes to events.
+  </Card>
+  <Card title="Examples" icon="flask" href="/guides/examples">
+    See real-world integration patterns.
+  </Card>
+</CardGroup>

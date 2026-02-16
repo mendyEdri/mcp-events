@@ -1,0 +1,350 @@
+---
+title: EventsClient API
+sidebarTitle: Client API
+description: Complete API reference for the EventsClient class.
+---
+
+## Class: EventsClient
+
+Wraps a standard MCP `Client` with MCPE event subscription capabilities.
+
+```typescript
+import { EventsClient } from "@mcpe/core";
+```
+
+### Constructors
+
+<CodeGroup>
+```typescript Config Object
+new EventsClient(config: EventsClientConfig)
+```
+
+```typescript Existing Client
+new EventsClient(mcpClient: Client)
+```
+</CodeGroup>
+
+---
+
+## Properties
+
+### `mcpClient`
+
+```typescript
+readonly mcpClient: Client
+```
+
+The underlying MCP client instance.
+
+### `scheduler`
+
+```typescript
+readonly scheduler: ClientScheduler
+```
+
+Client-side scheduler for local cron and timer jobs.
+
+---
+
+## Connection Methods
+
+### `connect(transport)`
+
+Connect to an MCPE server via MCP transport.
+
+```typescript
+async connect(transport: Transport): Promise<void>
+```
+
+### `close()`
+
+Close the connection and clean up resources.
+
+```typescript
+async close(): Promise<void>
+```
+
+### `supportsEvents()`
+
+Check if the connected server supports MCPE events.
+
+```typescript
+supportsEvents(): boolean
+```
+
+Returns `true` if the server advertised an `events` capability during initialization.
+
+---
+
+## Subscription Methods
+
+### `subscribe(request)`
+
+Create a new event subscription.
+
+```typescript
+async subscribe(request: CreateSubscriptionRequest): Promise<SubscribeResult>
+```
+
+**Parameters:**
+
+```typescript
+interface CreateSubscriptionRequest {
+  filter: EventFilter;
+  delivery: DeliveryPreferences;
+  handler?: EventHandler;
+  expiresAt?: string;          // ISO 8601 datetime
+}
+```
+
+**Returns:**
+
+```typescript
+interface SubscribeResult {
+  subscriptionId: string;
+  status: string;
+  filter: EventFilter;
+  delivery: DeliveryPreferences;
+  createdAt: string;
+  expiresAt?: string;
+}
+```
+
+**Example:**
+```typescript
+const sub = await client.subscribe({
+  filter: { sources: ["github"], eventTypes: ["github.*"] },
+  delivery: { channels: ["realtime"] },
+});
+```
+
+### `unsubscribe(subscriptionId)`
+
+Remove a subscription.
+
+```typescript
+async unsubscribe(subscriptionId: string): Promise<boolean>
+```
+
+### `listSubscriptions(status?)`
+
+List subscriptions, optionally filtered by status.
+
+```typescript
+async listSubscriptions(
+  status?: "active" | "paused" | "expired"
+): Promise<ListSubscriptionsResult>
+```
+
+**Returns:**
+
+```typescript
+interface ListSubscriptionsResult {
+  subscriptions: Array<{
+    id: string;
+    status: string;
+    filter: EventFilter;
+    delivery: DeliveryPreferences;
+    createdAt: string;
+    expiresAt?: string;
+  }>;
+}
+```
+
+### `pause(subscriptionId)`
+
+Pause a subscription. Events stop being delivered but the subscription is preserved.
+
+```typescript
+async pause(subscriptionId: string): Promise<{
+  subscriptionId: string;
+  status: string;
+}>
+```
+
+### `resume(subscriptionId)`
+
+Resume a paused subscription.
+
+```typescript
+async resume(subscriptionId: string): Promise<{
+  subscriptionId: string;
+  status: string;
+}>
+```
+
+### `update(subscriptionId, updates)`
+
+Update a subscription's filter, delivery, or handler.
+
+```typescript
+async update(
+  subscriptionId: string,
+  updates: Omit<UpdateSubscriptionRequest, "status">
+): Promise<SubscribeResult>
+```
+
+---
+
+## Event Handler Methods
+
+### `onEvent(pattern, handler)`
+
+Register a handler for events matching a glob pattern.
+
+```typescript
+onEvent(pattern: string, handler: EventCallback): () => void
+```
+
+**Returns:** An unsubscribe function to remove the handler.
+
+**Callback type:**
+
+```typescript
+type EventCallback = (
+  event: MCPEvent,
+  subscriptionId: string
+) => void | Promise<void>;
+```
+
+**Example:**
+```typescript
+const off = client.onEvent("github.*", (event, subId) => {
+  console.log(event.type, event.data);
+});
+
+// Later: stop handling
+off();
+```
+
+### `onBatch(handler)`
+
+Register a handler for batch event deliveries.
+
+```typescript
+onBatch(handler: BatchEventCallback): () => void
+```
+
+**Callback type:**
+
+```typescript
+type BatchEventCallback = (
+  events: MCPEvent[],
+  subscriptionId: string
+) => void | Promise<void>;
+```
+
+### `onSubscriptionExpired(handler)`
+
+Register a handler for subscription expiration notifications.
+
+```typescript
+onSubscriptionExpired(handler: SubscriptionExpiredCallback): () => void
+```
+
+**Callback type:**
+
+```typescript
+type SubscriptionExpiredCallback = (
+  subscriptionId: string
+) => void | Promise<void>;
+```
+
+### `clearHandlers()`
+
+Remove all registered event handlers.
+
+```typescript
+clearHandlers(): void
+```
+
+---
+
+## Local Scheduling Methods
+
+### `subscribeWithLocalCron(filter, cronConfig, handler)`
+
+Subscribe to events with client-side cron batching.
+
+```typescript
+async subscribeWithLocalCron(
+  filter: EventFilter,
+  cronConfig: LocalCronConfig,
+  handler: LocalBatchHandler
+): Promise<SubscribeResult>
+```
+
+```typescript
+interface LocalCronConfig {
+  expression: string;    // Cron expression
+  timezone?: string;     // IANA timezone (default: "UTC")
+  maxEvents?: number;    // Max events to queue (default: 1000)
+}
+
+type LocalBatchHandler = (events: MCPEvent[]) => void | Promise<void>;
+```
+
+### `subscribeWithLocalTimer(filter, timerConfig, handler)`
+
+Subscribe to events with a one-time delayed delivery.
+
+```typescript
+async subscribeWithLocalTimer(
+  filter: EventFilter,
+  timerConfig: LocalTimerConfig,
+  handler: LocalBatchHandler
+): Promise<SubscribeResult>
+```
+
+```typescript
+interface LocalTimerConfig {
+  delayMs: number;       // Delay in milliseconds
+  maxEvents?: number;    // Max events to queue (default: 1000)
+}
+```
+
+### `scheduleDelayedTask(task, delayMs, handler)`
+
+Schedule a delayed task with a callback.
+
+```typescript
+async scheduleDelayedTask(
+  task: string,
+  delayMs: number,
+  handler: (
+    task: string,
+    metadata: { scheduledAt: Date; deliveredAt: Date }
+  ) => void | Promise<void>
+): Promise<{ subscriptionId: string; scheduledFor: Date }>
+```
+
+### `getSchedulerInfo()`
+
+Get information about active local scheduler jobs.
+
+```typescript
+getSchedulerInfo(): {
+  activeJobs: Array<{
+    subscriptionId: string;
+    type: "cron" | "timer";
+    nextRun?: Date;
+    pendingEvents: number;
+  }>;
+}
+```
+
+### `stopLocalScheduler(subscriptionId)`
+
+Stop a specific local scheduler.
+
+```typescript
+stopLocalScheduler(subscriptionId: string): void
+```
+
+### `stopAllLocalSchedulers()`
+
+Stop all local schedulers.
+
+```typescript
+stopAllLocalSchedulers(): void
+```

@@ -1,0 +1,347 @@
+---
+title: MCPE Specification
+sidebarTitle: Specification
+description: Full MCP Events Extension protocol specification.
+---
+
+<Note>
+  **Status**: Draft Proposal | **Version**: 2025-01-01 | **Target**: Model Context Protocol Specification
+</Note>
+
+## Abstract
+
+MCP Events (MCPE) is a proposed extension to the Model Context Protocol that enables AI agents to subscribe to and receive real-time events from external systems. MCPE complements MCP's existing capabilities by adding a standardized, agent-controlled event subscription mechanism.
+
+## Motivation
+
+### The Gap in Current MCP
+
+MCP provides excellent primitives for agents to **act** on the world:
+
+| Primitive | Purpose | Agent Role |
+|-----------|---------|------------|
+| Tools | Execute actions | Caller |
+| Resources | Read data | Reader |
+| Prompts | Get templates | Consumer |
+
+However, MCP lacks a standardized mechanism for agents to **react** to external events.
+
+### Current Workarounds
+
+| Approach | Limitation |
+|----------|------------|
+| **Polling** | Wasteful, slow, doesn't scale |
+| **Webhooks** | Server-configured, not agent-controlled |
+| **Custom integrations** | Non-standard, each service is different |
+| **Long-lived connections** | Complex for serverless/ephemeral agents |
+
+### Use Cases Enabled by MCPE
+
+1. **Autonomous Monitoring** — Agent subscribes to GitHub issues and auto-triages them
+2. **Event-Driven Workflows** — Agent reacts to Slack mentions, email arrivals, calendar changes
+3. **Observability** — Agent monitors system alerts and takes corrective action
+4. **Human-in-the-Loop** — Agent receives approval events before proceeding with sensitive operations
+
+## Design Principles
+
+| Principle | Implementation |
+|-----------|---------------|
+| **Agent-Centric** | Agents control subscriptions (create, pause, resume, remove) |
+| **Transport-Agnostic** | Works over stdio, SSE, WebSocket (same as MCP) |
+| **Schema-Driven** | LLM-friendly schemas enable reasoning about subscriptions |
+| **JSON-RPC 2.0** | Same protocol foundation as MCP |
+| **Backwards Compatible** | Extends MCP without breaking existing implementations |
+
+## Protocol Specification
+
+### 1. Capability Declaration
+
+MCPE-enabled servers declare their capabilities in the initialization response:
+
+```typescript
+interface ServerCapabilities {
+  // ... existing MCP capabilities ...
+  events?: {
+    maxSubscriptions: number;
+    supportedSources: string[];
+    deliveryChannels: DeliveryChannel[];
+    features: {
+      pause: boolean;
+      wildcards: boolean;
+      cronSchedule: boolean;
+      scheduledDelivery: boolean;
+    };
+  };
+}
+
+type DeliveryChannel = "realtime" | "cron" | "scheduled";
+```
+
+### 2. Subscription Management Tools
+
+MCPE registers the following tools with the MCP server:
+
+#### `events_subscribe`
+
+```typescript
+{
+  name: "events_subscribe",
+  description: "Subscribe to events matching a filter",
+  inputSchema: {
+    type: "object",
+    properties: {
+      filter: {
+        type: "object",
+        properties: {
+          sources: { type: "array", items: { type: "string" } },
+          eventTypes: { type: "array", items: { type: "string" } },
+          tags: { type: "array", items: { type: "string" } },
+          priority: {
+            type: "array",
+            items: { enum: ["low", "normal", "high", "critical"] }
+          }
+        }
+      },
+      delivery: {
+        type: "object",
+        properties: {
+          channels: {
+            type: "array",
+            items: { enum: ["realtime", "cron", "scheduled"] }
+          },
+          cronSchedule: { /* CronSchedule schema */ },
+          scheduledDelivery: { /* ScheduledDelivery schema */ }
+        },
+        required: ["channels"]
+      },
+      handler: {
+        oneOf: [
+          { /* BashHandler schema */ },
+          { /* AgentHandler schema */ },
+          { /* WebhookHandler schema */ }
+        ]
+      },
+      expiresAt: { type: "string", format: "date-time" }
+    }
+  }
+}
+```
+
+#### `events_unsubscribe`
+
+```typescript
+{
+  name: "events_unsubscribe",
+  inputSchema: {
+    type: "object",
+    properties: {
+      subscriptionId: { type: "string", format: "uuid" }
+    },
+    required: ["subscriptionId"]
+  }
+}
+```
+
+#### `events_list`
+
+```typescript
+{
+  name: "events_list",
+  inputSchema: {
+    type: "object",
+    properties: {
+      status: { enum: ["active", "paused", "expired"] }
+    }
+  }
+}
+```
+
+#### `events_pause` / `events_resume`
+
+```typescript
+{
+  name: "events_pause", // or "events_resume"
+  inputSchema: {
+    type: "object",
+    properties: {
+      subscriptionId: { type: "string", format: "uuid" }
+    },
+    required: ["subscriptionId"]
+  }
+}
+```
+
+#### `events_update`
+
+```typescript
+{
+  name: "events_update",
+  inputSchema: {
+    type: "object",
+    properties: {
+      subscriptionId: { type: "string", format: "uuid" },
+      filter: { /* EventFilter schema */ },
+      delivery: { /* DeliveryPreferences schema */ },
+      expiresAt: { type: "string", format: "date-time", nullable: true }
+    },
+    required: ["subscriptionId"]
+  }
+}
+```
+
+### 3. Event Delivery Notifications
+
+#### `events/event` — Single Event
+
+```typescript
+{
+  method: "events/event",
+  params: {
+    subscriptionId: string,
+    event: {
+      id: string,
+      type: string,
+      data: Record<string, unknown>,
+      metadata: {
+        source: string,
+        sourceEventId?: string,
+        timestamp: string,
+        priority: "low" | "normal" | "high" | "critical",
+        tags?: string[]
+      }
+    }
+  }
+}
+```
+
+#### `events/batch` — Batch Delivery
+
+```typescript
+{
+  method: "events/batch",
+  params: {
+    subscriptionId: string,
+    events: MCPEvent[]
+  }
+}
+```
+
+#### `events/subscription_expired`
+
+```typescript
+{
+  method: "events/subscription_expired",
+  params: {
+    subscriptionId: string
+  }
+}
+```
+
+### 4. Event Structure
+
+```typescript
+interface MCPEvent {
+  id: string;
+  type: string;
+  data: Record<string, unknown>;
+  metadata: {
+    source: string;
+    sourceEventId?: string;
+    timestamp: string;
+    priority: "low" | "normal" | "high" | "critical";
+    tags?: string[];
+  };
+}
+```
+
+### 5. Event Filtering
+
+| Filter | Logic |
+|--------|-------|
+| `sources` | Event source must be in list |
+| `eventTypes` | Exact match or wildcard (`github.*`) |
+| `tags` | Any tag matches (OR) |
+| `priority` | Priority must be in list |
+| Combined | All filters must match (AND) |
+
+## Event Handlers
+
+### Bash Handler
+
+```typescript
+interface BashEventHandler {
+  type: "bash";
+  command: string;
+  args?: string[];
+  cwd?: string;
+  env?: Record<string, string>;
+  input: "stdin" | "env" | "args";
+  timeout: number;
+}
+```
+
+### Agent Handler
+
+```typescript
+interface AgentEventHandler {
+  type: "agent";
+  systemPrompt?: string;
+  model?: string;
+  instructions?: string;
+  tools?: string[];
+  maxTokens?: number;
+}
+```
+
+### Webhook Handler
+
+```typescript
+interface WebhookEventHandler {
+  type: "webhook";
+  url: string;
+  headers?: Record<string, string>;
+  timeout: number;
+}
+```
+
+## Comparison: MCP vs MCPE
+
+| Aspect | MCP | MCPE |
+|--------|-----|------|
+| **Primary Pattern** | Request/Response | Subscribe/Notify |
+| **Agent Role** | Caller | Listener |
+| **Discovery** | `tools/list` | Capability in `initialize` |
+| **Interaction** | `tools/call` | `events_subscribe` + notifications |
+| **Data Flow** | Agent → Server → External | External → Server → Agent |
+| **Protocol** | JSON-RPC 2.0 | JSON-RPC 2.0 |
+| **Transport** | stdio/SSE/WS | stdio/SSE/WS |
+
+## Security Considerations
+
+1. **Subscription Authorization** — Servers should validate that clients are authorized to subscribe to specific sources/event types
+2. **Rate Limiting** — Servers should implement rate limits on subscriptions and events
+3. **Event Filtering** — Sensitive data should be filtered before delivery
+4. **Handler Security** — Bash handlers should be sandboxed; webhook handlers should use HTTPS
+5. **Expiration** — Subscriptions should have default TTLs to prevent resource exhaustion
+
+## Backwards Compatibility
+
+- Servers without MCPE support don't advertise the `events` capability
+- Clients check `supportsEvents()` before using event features
+- All MCPE features use standard MCP tools/notifications
+- No changes to existing MCP protocol primitives
+
+## Open Questions
+
+1. **Event Persistence** — Should servers persist events for clients that disconnect?
+2. **Acknowledgments** — Should clients acknowledge event receipt?
+3. **Ordering Guarantees** — What ordering guarantees should the protocol provide?
+4. **Event Replay** — Should clients be able to request historical events?
+
+## Full Type Definitions
+
+See the [Types](/api/types) page for complete TypeScript type definitions.
+
+## Protocol Methods Summary
+
+See the [Protocol Methods](/api/protocol-methods) page for all JSON-RPC methods with request/response examples.

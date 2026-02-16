@@ -1,0 +1,139 @@
+---
+title: Transports
+description: WebSocket, SSE, and stdio transport options for MCPE.
+---
+
+MCPE inherits MCP's transport-agnostic design. Any MCP-compatible transport works for both subscription management and event delivery.
+
+## Transport Comparison
+
+| Transport | Direction | Use Case | Pros | Cons |
+|-----------|-----------|----------|------|------|
+| **stdio** | Bidirectional | Local MCP integration | Same as MCP tools, simple | Local only |
+| **WebSocket** | Bidirectional | Real-time servers | Low latency, full duplex | Persistent connection |
+| **SSE** | Server→Client (+HTTP POST) | Firewall-friendly | Works through proxies | Slightly higher overhead |
+
+## stdio
+
+Best for local development and when MCPE runs alongside MCP tools in the same process.
+
+<CodeGroup>
+```typescript Server
+import { EventsServer } from "@mcpe/core";
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+
+const server = new EventsServer({
+  name: "my-server",
+  version: "1.0.0",
+});
+
+await server.connect(new StdioServerTransport());
+```
+
+```typescript Client
+import { EventsClient } from "@mcpe/core";
+import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+
+const client = new EventsClient({ name: "my-agent", version: "1.0.0" });
+await client.connect(
+  new StdioClientTransport({
+    command: "node",
+    args: ["./my-server.js"],
+  })
+);
+```
+</CodeGroup>
+
+## WebSocket
+
+Best for networked deployments with real-time requirements.
+
+The standalone `@esmcp/server` and `@esmcp/client` packages provide WebSocket transports:
+
+<CodeGroup>
+```typescript Server
+import { EventHub } from "@esmcp/server";
+
+const hub = new EventHub({
+  port: 3000,
+  maxSubscriptionsPerClient: 100,
+  supportedProviders: ["github", "slack"],
+});
+
+await hub.start();
+```
+
+```typescript Client
+import { ESMCPClient } from "@esmcp/client";
+
+const client = new ESMCPClient({
+  serverUrl: "ws://localhost:3000",
+  clientInfo: { name: "MyApp", version: "1.0.0" },
+});
+
+await client.connect();
+```
+</CodeGroup>
+
+## SSE (Server-Sent Events)
+
+Best when clients are behind firewalls or proxies that block WebSocket connections.
+
+SSE uses two channels:
+- `GET /events/:clientId` — Server-to-client event stream
+- `POST /rpc/:clientId` — Client-to-server RPC commands
+
+<CodeGroup>
+```typescript Server
+import { SSEServer } from "@esmcp/sse";
+
+const server = new SSEServer({ port: 3001 });
+await server.start();
+```
+
+```typescript Client
+import { SSEClientTransport } from "@esmcp/sse";
+
+const transport = new SSEClientTransport({
+  url: "http://localhost:3001",
+});
+```
+</CodeGroup>
+
+### Why SSE?
+
+- Works through HTTP proxies and firewalls
+- Automatic reconnection built into browsers
+- Compatible with HTTP/2 multiplexing
+- No special server infrastructure needed
+
+## Choosing a Transport
+
+<Steps>
+  <Step title="Local development or same-process?">
+    Use **stdio**. It's the simplest option and matches how MCP tools work.
+  </Step>
+  <Step title="Networked deployment with real-time needs?">
+    Use **WebSocket**. It provides the lowest latency and full bidirectional communication.
+  </Step>
+  <Step title="Behind firewalls or corporate proxies?">
+    Use **SSE**. It works over standard HTTP and passes through most proxies.
+  </Step>
+</Steps>
+
+## Transport Interface
+
+All transports implement the standard MCP `Transport` interface:
+
+```typescript
+interface Transport {
+  start(): Promise<void>;
+  close(): Promise<void>;
+  send(message: JSONRPCMessage): Promise<void>;
+  onmessage?: (message: JSONRPCMessage) => void;
+  onclose?: () => void;
+  onerror?: (error: Error) => void;
+}
+```
+
+This means you can use any custom MCP transport with MCPE — just pass it to `server.connect()` or `client.connect()`.

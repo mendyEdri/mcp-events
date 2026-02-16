@@ -1,0 +1,153 @@
+---
+title: Protocol
+description: How MCPE extends MCP using JSON-RPC 2.0 tools and notifications.
+---
+
+MCPE adds event subscription capabilities to MCP by registering **tools** for subscription management and using **notifications** for event delivery. No protocol-level changes to MCP are required.
+
+## How It Works
+
+MCPE is implemented as a layer on top of standard MCP:
+
+1. **Capability Declaration** — The server advertises events support in `initialize`
+2. **Tool Registration** — Six MCP tools handle subscription lifecycle
+3. **Notification Delivery** — Events are pushed via MCP notifications
+
+```
+Agent                           MCPE Server
+  │                                  │
+  │──── initialize ─────────────────>│
+  │<─── capabilities (events: {...}) │
+  │                                  │
+  │──── callTool(events_subscribe) ─>│
+  │<─── { subscriptionId, status }   │
+  │                                  │
+  │<─── notification(events/event) ──│  (event occurs)
+  │<─── notification(events/event) ──│  (another event)
+  │                                  │
+  │──── callTool(events_pause) ─────>│
+  │<─── { status: "paused" }         │
+  │                                  │
+  │──── callTool(events_resume) ────>│
+  │<─── { status: "active" }         │
+  │                                  │
+  │──── callTool(events_unsubscribe)>│
+  │<─── { success: true }            │
+```
+
+## Capability Declaration
+
+MCPE-enabled servers include an `events` field in their capabilities during initialization:
+
+```typescript
+interface ServerCapabilities {
+  // ... existing MCP capabilities ...
+  events?: {
+    maxSubscriptions: number;
+    supportedSources: string[];
+    deliveryChannels: DeliveryChannel[];
+    features: {
+      pause: boolean;
+      wildcards: boolean;
+      cronSchedule: boolean;
+      scheduledDelivery: boolean;
+    };
+  };
+}
+```
+
+Clients check for events support with `client.supportsEvents()`.
+
+## Registered Tools
+
+MCPE registers six tools with the MCP server:
+
+| Tool | Purpose |
+|------|---------|
+| `events_subscribe` | Create a new event subscription |
+| `events_unsubscribe` | Remove a subscription |
+| `events_list` | List subscriptions (optionally by status) |
+| `events_pause` | Pause a subscription without losing it |
+| `events_resume` | Resume a paused subscription |
+| `events_update` | Modify filter, delivery, or handler |
+
+These are standard MCP tools — any MCP client can call them with `callTool`.
+
+## Notification Methods
+
+Events are delivered as MCP notifications:
+
+| Method | Purpose |
+|--------|---------|
+| `events/event` | Single event delivery |
+| `events/batch` | Batch delivery (for cron/scheduled) |
+| `events/subscription_expired` | Subscription expiration notice |
+
+## Protocol Flow
+
+### 1. Connection and Discovery
+
+```typescript
+// Client connects via any MCP transport
+await client.connect(transport);
+
+// Check if server supports events
+if (client.supportsEvents()) {
+  // Events are available
+}
+```
+
+### 2. Subscription Creation
+
+```typescript
+const sub = await client.subscribe({
+  filter: {
+    sources: ["github"],
+    eventTypes: ["github.issue.*"],
+    priority: ["high", "critical"],
+  },
+  delivery: { channels: ["realtime"] },
+});
+// Returns: { subscriptionId, status, filter, delivery, createdAt }
+```
+
+### 3. Event Delivery
+
+The server pushes matching events as notifications:
+
+```json
+{
+  "method": "events/event",
+  "params": {
+    "subscriptionId": "sub_123",
+    "event": {
+      "id": "evt_456",
+      "type": "github.issue.opened",
+      "data": { "title": "Bug report", "repo": "org/repo" },
+      "metadata": {
+        "source": "github",
+        "priority": "high",
+        "timestamp": "2025-01-15T10:30:00Z"
+      }
+    }
+  }
+}
+```
+
+### 4. Lifecycle Management
+
+```typescript
+await client.pause(sub.subscriptionId);    // Stop receiving temporarily
+await client.resume(sub.subscriptionId);   // Start receiving again
+await client.unsubscribe(sub.subscriptionId); // Remove completely
+```
+
+## JSON-RPC 2.0
+
+All messages follow the JSON-RPC 2.0 specification:
+
+- **Requests** have `method`, `params`, and `id`
+- **Responses** have `result` or `error` and matching `id`
+- **Notifications** have `method` and `params` but no `id`
+
+MCPE uses requests for tool calls and notifications for event delivery, consistent with how MCP handles tools and notifications.
