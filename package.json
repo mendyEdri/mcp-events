@@ -10,11 +10,14 @@
     "lint": "pnpm -r lint",
     "clean": "pnpm -r clean",
     "typecheck": "pnpm -r typecheck",
-    "docs:dev": "npx mintlify dev"
+    "docs:dev": "vitepress dev docs",
+    "docs:build": "vitepress build docs",
+    "docs:preview": "vitepress preview docs"
   },
   "devDependencies": {
     "@types/node": "^20.10.0",
     "typescript": "^5.3.0",
+    "vitepress": "^1.6.4",
     "vitest": "^1.0.0"
   },
   "packageManager": "pnpm@8.15.0",
