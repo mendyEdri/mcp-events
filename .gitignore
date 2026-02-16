@@ -6,3 +6,7 @@ coverage/
 .env
 .env.local
 *.tsbuildinfo
+examples/mock-apns/certs/*.key
+examples/mock-apns/certs/*.crt
+examples/webpush-demo/vapid-keys.json
+examples/webpush-browser-demo/vapid-keys.json

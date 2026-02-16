@@ -1,0 +1,33 @@
+---
+title: Website Integration
+description: Deploy these docs with Mintlify and link them from your site.
+---
+
+## Monorepo setup
+
+When you connect this repo in Mintlify, set the monorepo path to:
+
+```text
+/docs
+```
+
+## Domain options
+
+- Use `docs.yourdomain.com` for the fastest setup.
+- Or proxy `/docs` from your main website to Mintlify.
+
+## Vercel rewrite example
+
+```json
+{
+  "rewrites": [
+    { "source": "/docs", "destination": "https://YOUR_SUBDOMAIN.mintlify.dev/docs" },
+    { "source": "/docs/:match*", "destination": "https://YOUR_SUBDOMAIN.mintlify.dev/docs/:match*" }
+  ]
+}
+```
+
+## Add website nav link
+
+- If using subdomain: `https://docs.yourdomain.com`
+- If using subpath: `/docs`

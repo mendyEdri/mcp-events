@@ -13,13 +13,6 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const HUB_PORT = 8080;
 const MOCK_APNS_PORT = 2197;
 
-// Fake APNS credentials (mock server accepts anything)
-const FAKE_PRIVATE_KEY = `-----BEGIN EC PRIVATE KEY-----
-MHQCAQEEIFqNzgllrWkLl7YPxHU3HVq1mHVQKE8GqLgVS0H8sOAHoAcGBSuBBAAK
-oUQDQgAEQwYQgLVGxtDp0jAq2hCyQ7xsQiVHJTH3pOd11OyP5k4RIUjBwYBHlHKc
-9QQAH1H0GH0H0H0H0H0H0H0H0H0H0A==
------END EC PRIVATE KEY-----`;
-
 // Create a mock APNS client that connects to our local mock server
 class MockAPNSClient {
   private session: http2.ClientHttp2Session | null = null;
@@ -126,7 +119,8 @@ async function main() {
     apnsOptions: {
       teamId: 'FAKE_TEAM',
       keyId: 'FAKE_KEY',
-      privateKey: FAKE_PRIVATE_KEY,
+      // Mock client handles delivery, so this is never used for signing.
+      privateKey: 'mock-client-does-not-sign',
       bundleId: 'com.example.app',
       sandbox: true,
     },

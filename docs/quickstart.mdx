@@ -1,0 +1,41 @@
+---
+title: Quickstart
+description: Run the MCPE reference implementation locally.
+---
+
+## Prerequisites
+
+- Node.js 18+
+- pnpm 8+
+
+## Install and build
+
+```bash
+pnpm install
+pnpm build
+```
+
+## Run a demo
+
+```bash
+cd examples/webpush-demo
+npx tsx server-ws.ts
+```
+
+In separate terminals:
+
+```bash
+npx tsx cli-receive.ts
+```
+
+```bash
+npx tsx cli-publish.ts github.push '{"repo":"test","commits":3}'
+```
+
+## Preview docs locally
+
+Mintlify CLI requires Node.js 20.17.0+.
+
+```bash
+pnpm docs:dev
+```

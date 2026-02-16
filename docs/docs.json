@@ -1,0 +1,33 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "venus",
+  "name": "MCP Events (MCPE)",
+  "description": "Real-time event subscriptions for MCP-compatible agents.",
+  "colors": {
+    "primary": "#2563EB",
+    "light": "#60A5FA",
+    "dark": "#1D4ED8"
+  },
+  "navigation": [
+    {
+      "group": "Introduction",
+      "pages": [
+        "introduction",
+        "quickstart",
+        "protocol-overview"
+      ]
+    },
+    {
+      "group": "SDK",
+      "pages": [
+        "sdk/client"
+      ]
+    },
+    {
+      "group": "Guides",
+      "pages": [
+        "website-integration"
+      ]
+    }
+  ]
+}
