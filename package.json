@@ -10,7 +10,7 @@
     "lint": "pnpm -r lint",
     "clean": "pnpm -r clean",
     "typecheck": "pnpm -r typecheck",
-    "docs:dev": "cd docs && npx mint dev"
+    "docs:dev": "npx mintlify dev"
   },
   "devDependencies": {
     "@types/node": "^20.10.0",
