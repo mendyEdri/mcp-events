@@ -23,6 +23,7 @@ jobs:
         with:
           node-version: 20
       - run: echo "registry=https://registry.npmjs.org/" > .npmrc
+      - run: npm install vitepress
       - run: npx vitepress build docs
       - uses: actions/upload-pages-artifact@v3
         with:
