@@ -257,13 +257,13 @@ Notification that a subscription has expired due to its `expiresAt` time or `aut
 
 | Category | Method/Tool | Direction | Purpose |
 |----------|-------------|-----------|---------|
-| Discovery | `initialize` (capability) | Client <- Server | Advertise events support |
-| Subscribe | `events_subscribe` | Client -> Server | Create subscription |
-| Manage | `events_unsubscribe` | Client -> Server | Remove subscription |
-| Manage | `events_list` | Client -> Server | List subscriptions |
-| Manage | `events_pause` | Client -> Server | Pause subscription |
-| Manage | `events_resume` | Client -> Server | Resume subscription |
-| Manage | `events_update` | Client -> Server | Modify subscription |
-| Deliver | `events/event` | Client <- Server | Single event notification |
-| Deliver | `events/batch` | Client <- Server | Batch event notification |
-| Lifecycle | `events/subscription_expired` | Client <- Server | Expiration notification |
+| Discovery | `initialize` (capability) | Server to Client | Advertise events support |
+| Subscribe | `events_subscribe` | Client to Server | Create subscription |
+| Manage | `events_unsubscribe` | Client to Server | Remove subscription |
+| Manage | `events_list` | Client to Server | List subscriptions |
+| Manage | `events_pause` | Client to Server | Pause subscription |
+| Manage | `events_resume` | Client to Server | Resume subscription |
+| Manage | `events_update` | Client to Server | Modify subscription |
+| Deliver | `events/event` | Server to Client | Single event notification |
+| Deliver | `events/batch` | Server to Client | Batch event notification |
+| Lifecycle | `events/subscription_expired` | Server to Client | Expiration notification |
