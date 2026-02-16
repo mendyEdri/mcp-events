@@ -61,7 +61,7 @@ Event types use a **hierarchical dot-notation** format: `source.category.action`
 | `deployment.started` | Deployment began |
 | `deployment.failed` | Deployment failed |
 
-The hierarchy allows wildcard filtering — see below.
+The hierarchy allows wildcard filtering - see below.
 
 ## Event Filtering
 
@@ -118,11 +118,9 @@ MCPE supports glob-style wildcards in `eventTypes`:
 | `github.*` | `github.push`, `github.star` | `github.issue.opened` |
 | `github.issue.*` | `github.issue.opened`, `github.issue.closed` | `github.push` |
 | `*.push` | `github.push`, `gitlab.push` | `github.issue.opened` |
-| `*` | Everything | — |
+| `*` | Everything | - |
 
-<Note>
-  `*` matches a single segment. `github.*` matches `github.push` but not `github.issue.opened`. Use `github.issue.*` to match all issue sub-events.
-</Note>
+> **Note:** `*` matches a single segment. `github.*` matches `github.push` but not `github.issue.opened`. Use `github.issue.*` to match all issue sub-events.
 
 The `matchesFilter` utility function handles all matching logic:
 

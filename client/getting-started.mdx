@@ -65,7 +65,7 @@ After connecting, verify that the server supports MCPE:
 
 ```typescript
 if (client.supportsEvents()) {
-  // Server has events capability — safe to subscribe
+  // Server has events capability - safe to subscribe
 } else {
   console.log("This server does not support events");
 }
@@ -115,21 +115,21 @@ client.onSubscriptionExpired((subscriptionId) => {
 ## Lifecycle Management
 
 ```typescript
-// Pause — stop receiving events temporarily
+// Pause - stop receiving events temporarily
 await client.pause(sub.subscriptionId);
 
-// Resume — start receiving again
+// Resume - start receiving again
 await client.resume(sub.subscriptionId);
 
-// Update — modify the subscription
+// Update - modify the subscription
 await client.update(sub.subscriptionId, {
   filter: { priority: ["critical"] },
 });
 
-// List — see all subscriptions
+// List - see all subscriptions
 const result = await client.listSubscriptions("active");
 
-// Unsubscribe — remove completely
+// Unsubscribe - remove completely
 await client.unsubscribe(sub.subscriptionId);
 ```
 
@@ -182,6 +182,6 @@ process.on("SIGINT", async () => {
 
 ## Next Steps
 
-- [Subscribing](/client/subscribing) — Filter patterns and delivery options
-- [Event Handlers](/client/event-handlers) — Bash, webhook, and agent handlers
-- [Scheduling](/client/scheduling) — Client-side cron and timers
+- [Subscribing](/client/subscribing) - Filter patterns and delivery options
+- [Event Handlers](/client/event-handlers) - Bash, webhook, and agent handlers
+- [Scheduling](/client/scheduling) - Client-side cron and timers

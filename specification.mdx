@@ -4,9 +4,7 @@ sidebarTitle: Specification
 description: Full MCP Events Extension protocol specification.
 ---
 
-<Note>
-  **Status**: Draft Proposal | **Version**: 2025-01-01 | **Target**: Model Context Protocol Specification
-</Note>
+> **Note:** **Status**: Draft Proposal | **Version**: 2025-01-01 | **Target**: Model Context Protocol Specification
 
 ## Abstract
 
@@ -37,10 +35,10 @@ However, MCP lacks a standardized mechanism for agents to **react** to external 
 
 ### Use Cases Enabled by MCPE
 
-1. **Autonomous Monitoring** — Agent subscribes to GitHub issues and auto-triages them
-2. **Event-Driven Workflows** — Agent reacts to Slack mentions, email arrivals, calendar changes
-3. **Observability** — Agent monitors system alerts and takes corrective action
-4. **Human-in-the-Loop** — Agent receives approval events before proceeding with sensitive operations
+1. **Autonomous Monitoring** - Agent subscribes to GitHub issues and auto-triages them
+2. **Event-Driven Workflows** - Agent reacts to Slack mentions, email arrivals, calendar changes
+3. **Observability** - Agent monitors system alerts and takes corrective action
+4. **Human-in-the-Loop** - Agent receives approval events before proceeding with sensitive operations
 
 ## Design Principles
 
@@ -191,7 +189,7 @@ MCPE registers the following tools with the MCP server:
 
 ### 3. Event Delivery Notifications
 
-#### `events/event` — Single Event
+#### `events/event` - Single Event
 
 ```typescript
 {
@@ -214,7 +212,7 @@ MCPE registers the following tools with the MCP server:
 }
 ```
 
-#### `events/batch` — Batch Delivery
+#### `events/batch` - Batch Delivery
 
 ```typescript
 {
@@ -312,17 +310,17 @@ interface WebhookEventHandler {
 | **Agent Role** | Caller | Listener |
 | **Discovery** | `tools/list` | Capability in `initialize` |
 | **Interaction** | `tools/call` | `events_subscribe` + notifications |
-| **Data Flow** | Agent → Server → External | External → Server → Agent |
+| **Data Flow** | Agent -> Server -> External | External -> Server -> Agent |
 | **Protocol** | JSON-RPC 2.0 | JSON-RPC 2.0 |
 | **Transport** | stdio/SSE/WS | stdio/SSE/WS |
 
 ## Security Considerations
 
-1. **Subscription Authorization** — Servers should validate that clients are authorized to subscribe to specific sources/event types
-2. **Rate Limiting** — Servers should implement rate limits on subscriptions and events
-3. **Event Filtering** — Sensitive data should be filtered before delivery
-4. **Handler Security** — Bash handlers should be sandboxed; webhook handlers should use HTTPS
-5. **Expiration** — Subscriptions should have default TTLs to prevent resource exhaustion
+1. **Subscription Authorization** - Servers should validate that clients are authorized to subscribe to specific sources/event types
+2. **Rate Limiting** - Servers should implement rate limits on subscriptions and events
+3. **Event Filtering** - Sensitive data should be filtered before delivery
+4. **Handler Security** - Bash handlers should be sandboxed; webhook handlers should use HTTPS
+5. **Expiration** - Subscriptions should have default TTLs to prevent resource exhaustion
 
 ## Backwards Compatibility
 
@@ -333,10 +331,10 @@ interface WebhookEventHandler {
 
 ## Open Questions
 
-1. **Event Persistence** — Should servers persist events for clients that disconnect?
-2. **Acknowledgments** — Should clients acknowledge event receipt?
-3. **Ordering Guarantees** — What ordering guarantees should the protocol provide?
-4. **Event Replay** — Should clients be able to request historical events?
+1. **Event Persistence** - Should servers persist events for clients that disconnect?
+2. **Acknowledgments** - Should clients acknowledge event receipt?
+3. **Ordering Guarantees** - What ordering guarantees should the protocol provide?
+4. **Event Replay** - Should clients be able to request historical events?
 
 ## Full Type Definitions
 

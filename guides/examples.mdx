@@ -7,7 +7,6 @@ description: Real-world patterns and code examples for MCPE.
 
 An agent that watches for new GitHub issues and auto-triages them.
 
-<CodeGroup>
 ```typescript Server
 import { EventsServer } from "@mcpe/core";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
@@ -65,11 +64,10 @@ client.onEvent("github.issues.opened", async (event) => {
 
   // Auto-triage logic
   if (title.toLowerCase().includes("bug")) {
-    console.log("→ Auto-labeled as bug");
+    console.log("-> Auto-labeled as bug");
   }
 });
 ```
-</CodeGroup>
 
 ## Daily Digest
 

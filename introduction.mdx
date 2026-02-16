@@ -6,20 +6,10 @@ description: A proposed extension to the Model Context Protocol for real-time ev
 
 MCP gives AI agents access to **tools** and **resources**, but agents currently lack a standardized way to **subscribe to and receive real-time events** from external systems. MCPE fills that gap.
 
-<CardGroup cols={2}>
-  <Card title="Quickstart" icon="bolt" href="/quickstart">
-    Get a server and client running in 5 minutes.
-  </Card>
-  <Card title="Why MCPE?" icon="lightbulb" href="/why-mcpe">
-    Understand the problem MCPE solves and how it compares to webhooks.
-  </Card>
-  <Card title="Core Concepts" icon="book" href="/concepts/protocol">
-    Learn about the protocol, events, subscriptions, and transports.
-  </Card>
-  <Card title="API Reference" icon="code" href="/api/server-api">
-    Full API docs for EventsServer and EventsClient.
-  </Card>
-</CardGroup>
+- **[Quickstart](/quickstart)** - Get a server and client running in 5 minutes.
+- **[Why MCPE?](/why-mcpe)** - Understand the problem MCPE solves and how it compares to webhooks.
+- **[Core Concepts](/concepts/protocol)** - Learn about the protocol, events, subscriptions, and transports.
+- **[API Reference](/api/server-api)** - Full API docs for EventsServer and EventsClient.
 
 ## What is MCPE?
 
@@ -49,20 +39,10 @@ client.onEvent('github.issue.commented', async (event) => {
 
 ## Design Principles
 
-<CardGroup cols={2}>
-  <Card title="Agent-Centric" icon="robot">
-    Agents decide what to subscribe to, when to pause, and when to unsubscribe.
-  </Card>
-  <Card title="Transport-Agnostic" icon="shuffle">
-    Works over WebSocket, SSE, or stdio — just like MCP.
-  </Card>
-  <Card title="Schema-Driven" icon="diagram-project">
-    LLM-friendly schemas enable agents to reason about subscriptions.
-  </Card>
-  <Card title="Open Standards" icon="globe">
-    Built on JSON-RPC 2.0, following MCP conventions.
-  </Card>
-</CardGroup>
+- **Agent-Centric** - Agents decide what to subscribe to, when to pause, and when to unsubscribe.
+- **Transport-Agnostic** - Works over WebSocket, SSE, or stdio - just like MCP.
+- **Schema-Driven** - LLM-friendly schemas enable agents to reason about subscriptions.
+- **Open Standards** - Built on JSON-RPC 2.0, following MCP conventions.
 
 ## Architecture
 

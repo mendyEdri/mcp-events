@@ -90,7 +90,6 @@ When you create an `EventsServer`, it automatically:
 
 Connect to any MCP transport:
 
-<CodeGroup>
 ```typescript stdio
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 await server.connect(new StdioServerTransport());
@@ -102,7 +101,6 @@ import { EventHub } from "@esmcp/server";
 const hub = new EventHub({ port: 3000 });
 await hub.start();
 ```
-</CodeGroup>
 
 ## Publishing Events
 
@@ -146,6 +144,6 @@ await server.close();
 
 ## Next Steps
 
-- [Publishing Events](/server/publishing-events) — Event routing and handler execution
-- [Delivery](/server/delivery) — Cron, scheduled, and realtime delivery modes
-- [Configuration](/server/configuration) — All options and capability settings
+- [Publishing Events](/server/publishing-events) - Event routing and handler execution
+- [Delivery](/server/delivery) - Cron, scheduled, and realtime delivery modes
+- [Configuration](/server/configuration) - All options and capability settings

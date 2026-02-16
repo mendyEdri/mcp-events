@@ -101,16 +101,14 @@ When a subscription expires, the server sends an `events/subscription_expired` n
 Pausing a subscription stops event delivery without losing the subscription state. This is useful when an agent needs to temporarily stop processing events.
 
 ```typescript
-// Pause — events are queued but not delivered
+// Pause - events are queued but not delivered
 await client.pause(sub.subscriptionId);
 
-// Resume — queued events may be delivered
+// Resume - queued events may be delivered
 await client.resume(sub.subscriptionId);
 ```
 
-<Note>
-  Whether events that occur during a pause are replayed on resume depends on the server implementation. The reference implementation does not queue events during pause.
-</Note>
+> **Note:** Whether events that occur during a pause are replayed on resume depends on the server implementation. The reference implementation does not queue events during pause.
 
 ### Update
 
@@ -202,7 +200,7 @@ See [Delivery](/server/delivery) for more details on delivery modes.
 
 Servers can enforce limits via capabilities:
 
-- **`maxSubscriptions`** — Maximum subscriptions per client (default: 100)
-- **Feature flags** — `pause`, `wildcards`, `cronSchedule`, `scheduledDelivery`
+- **`maxSubscriptions`** - Maximum subscriptions per client (default: 100)
+- **Feature flags** - `pause`, `wildcards`, `cronSchedule`, `scheduledDelivery`
 
 Attempting to exceed limits or use unsupported features returns an error.

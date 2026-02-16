@@ -5,7 +5,7 @@ description: All JSON-RPC methods and notifications in the MCPE protocol.
 
 MCPE uses standard MCP tools for client-to-server requests and MCP notifications for server-to-client event delivery. All messages follow the JSON-RPC 2.0 specification.
 
-## Tools (Client → Server)
+## Tools (Client -> Server)
 
 ### `events_subscribe`
 
@@ -173,7 +173,7 @@ All fields except `subscriptionId` are optional. Only provided fields are update
 
 ---
 
-## Notifications (Server → Client)
+## Notifications (Server -> Client)
 
 ### `events/event`
 
@@ -257,13 +257,13 @@ Notification that a subscription has expired due to its `expiresAt` time or `aut
 
 | Category | Method/Tool | Direction | Purpose |
 |----------|-------------|-----------|---------|
-| Discovery | `initialize` (capability) | Client ← Server | Advertise events support |
-| Subscribe | `events_subscribe` | Client → Server | Create subscription |
-| Manage | `events_unsubscribe` | Client → Server | Remove subscription |
-| Manage | `events_list` | Client → Server | List subscriptions |
-| Manage | `events_pause` | Client → Server | Pause subscription |
-| Manage | `events_resume` | Client → Server | Resume subscription |
-| Manage | `events_update` | Client → Server | Modify subscription |
-| Deliver | `events/event` | Client ← Server | Single event notification |
-| Deliver | `events/batch` | Client ← Server | Batch event notification |
-| Lifecycle | `events/subscription_expired` | Client ← Server | Expiration notification |
+| Discovery | `initialize` (capability) | Client <- Server | Advertise events support |
+| Subscribe | `events_subscribe` | Client -> Server | Create subscription |
+| Manage | `events_unsubscribe` | Client -> Server | Remove subscription |
+| Manage | `events_list` | Client -> Server | List subscriptions |
+| Manage | `events_pause` | Client -> Server | Pause subscription |
+| Manage | `events_resume` | Client -> Server | Resume subscription |
+| Manage | `events_update` | Client -> Server | Modify subscription |
+| Deliver | `events/event` | Client <- Server | Single event notification |
+| Deliver | `events/batch` | Client <- Server | Batch event notification |
+| Lifecycle | `events/subscription_expired` | Client <- Server | Expiration notification |

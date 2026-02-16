@@ -57,7 +57,7 @@ Exact match or wildcard:
 // Exact match
 filter: { eventTypes: ["github.push"] }
 
-// Wildcard — all issue events
+// Wildcard - all issue events
 filter: { eventTypes: ["github.issue.*"] }
 
 // Multiple patterns
@@ -72,7 +72,7 @@ filter: { priority: ["high", "critical"] }
 
 ### By Tags
 
-Tags use OR logic — an event matching **any** tag is included:
+Tags use OR logic - an event matching **any** tag is included:
 
 ```typescript
 filter: { tags: ["ci", "deploy", "production"] }
@@ -165,7 +165,7 @@ client.onEvent("github.*", (event) => { /* ... */ });
 client.onEvent("github.issue.opened", (event) => { /* ... */ });
 ```
 
-Multiple handlers can match the same event — they all execute.
+Multiple handlers can match the same event - they all execute.
 
 ### Unregistering Handlers
 

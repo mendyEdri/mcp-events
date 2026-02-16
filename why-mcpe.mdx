@@ -5,7 +5,7 @@ description: The problem MCPE solves and how it compares to existing approaches.
 
 ## The Problem
 
-MCP provides excellent primitives for agents to **act** on the world — tools, resources, and prompts. But agents currently lack a standardized mechanism to **react** to external events.
+MCP provides excellent primitives for agents to **act** on the world - tools, resources, and prompts. But agents currently lack a standardized mechanism to **react** to external events.
 
 Consider these scenarios:
 - An agent monitoring a GitHub repository for new issues
@@ -73,69 +73,67 @@ MCPE extends MCP with a standardized, **agent-controlled** event subscription me
 
 ## Use Cases
 
-<AccordionGroup>
-  <Accordion title="Autonomous Monitoring">
-    An agent subscribes to GitHub issues and auto-triages them based on labels, priority, and content.
+### Autonomous Monitoring
 
-    ```typescript
-    await client.subscribe({
-      filter: {
-        sources: ["github"],
-        eventTypes: ["github.issue.opened"],
-        priority: ["high", "critical"],
-      },
-      delivery: { channels: ["realtime"] },
-    });
-    ```
-  </Accordion>
+An agent subscribes to GitHub issues and auto-triages them based on labels, priority, and content.
 
-  <Accordion title="Event-Driven Workflows">
-    An agent reacts to Slack mentions, email arrivals, and calendar changes to coordinate team workflows.
+```typescript
+await client.subscribe({
+  filter: {
+    sources: ["github"],
+    eventTypes: ["github.issue.opened"],
+    priority: ["high", "critical"],
+  },
+  delivery: { channels: ["realtime"] },
+});
+```
 
-    ```typescript
-    await client.subscribe({
-      filter: {
-        sources: ["slack", "gmail"],
-        eventTypes: ["slack.message", "gmail.received"],
-      },
-      delivery: { channels: ["realtime"] },
-    });
-    ```
-  </Accordion>
+### Event-Driven Workflows
 
-  <Accordion title="Daily Digests">
-    An agent collects events throughout the day and delivers a summary on a cron schedule.
+An agent reacts to Slack mentions, email arrivals, and calendar changes to coordinate team workflows.
 
-    ```typescript
-    await client.subscribe({
-      filter: { sources: ["github"] },
-      delivery: {
-        channels: ["cron"],
-        cronSchedule: {
-          expression: "0 9 * * *",
-          timezone: "America/New_York",
-        },
-      },
-    });
-    ```
-  </Accordion>
+```typescript
+await client.subscribe({
+  filter: {
+    sources: ["slack", "gmail"],
+    eventTypes: ["slack.message", "gmail.received"],
+  },
+  delivery: { channels: ["realtime"] },
+});
+```
 
-  <Accordion title="Human-in-the-Loop">
-    An agent receives approval events before proceeding with sensitive operations like deployments.
+### Daily Digests
 
-    ```typescript
-    await client.subscribe({
-      filter: { eventTypes: ["approval.*"] },
-      delivery: { channels: ["realtime"] },
-      handler: {
-        type: "agent",
-        systemPrompt: "Process the approval and continue the deployment pipeline.",
-        tools: ["deploy_to_production"],
-      },
-    });
-    ```
-  </Accordion>
-</AccordionGroup>
+An agent collects events throughout the day and delivers a summary on a cron schedule.
+
+```typescript
+await client.subscribe({
+  filter: { sources: ["github"] },
+  delivery: {
+    channels: ["cron"],
+    cronSchedule: {
+      expression: "0 9 * * *",
+      timezone: "America/New_York",
+    },
+  },
+});
+```
+
+### Human-in-the-Loop
+
+An agent receives approval events before proceeding with sensitive operations like deployments.
+
+```typescript
+await client.subscribe({
+  filter: { eventTypes: ["approval.*"] },
+  delivery: { channels: ["realtime"] },
+  handler: {
+    type: "agent",
+    systemPrompt: "Process the approval and continue the deployment pipeline.",
+    tools: ["deploy_to_production"],
+  },
+});
+```
 
 ## Relationship to MCP
 
@@ -144,4 +142,4 @@ MCPE is designed to **complement MCP**, not replace it:
 - **MCP Tools** = Agent performs actions (imperative)
 - **MCPE Subscriptions** = Agent receives events (reactive)
 
-MCPE uses standard MCP primitives — tools for subscription management, notifications for event delivery — so it works with any MCP-compatible transport and requires no protocol-level changes.
+MCPE uses standard MCP primitives - tools for subscription management, notifications for event delivery - so it works with any MCP-compatible transport and requires no protocol-level changes.

@@ -9,9 +9,9 @@ MCPE adds event subscription capabilities to MCP by registering **tools** for su
 
 MCPE is implemented as a layer on top of standard MCP:
 
-1. **Capability Declaration** — The server advertises events support in `initialize`
-2. **Tool Registration** — Six MCP tools handle subscription lifecycle
-3. **Notification Delivery** — Events are pushed via MCP notifications
+1. **Capability Declaration** - The server advertises events support in `initialize`
+2. **Tool Registration** - Six MCP tools handle subscription lifecycle
+3. **Notification Delivery** - Events are pushed via MCP notifications
 
 ```
 Agent                           MCPE Server
@@ -71,7 +71,7 @@ MCPE registers six tools with the MCP server:
 | `events_resume` | Resume a paused subscription |
 | `events_update` | Modify filter, delivery, or handler |
 
-These are standard MCP tools — any MCP client can call them with `callTool`.
+These are standard MCP tools - any MCP client can call them with `callTool`.
 
 ## Notification Methods
 
