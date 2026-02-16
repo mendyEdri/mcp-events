@@ -3,6 +3,7 @@ import { defineConfig } from 'vitepress'
 export default defineConfig({
   title: 'MCP Events (MCPE)',
   description: 'Real-time event subscriptions for MCP-compatible agents.',
+  base: '/mcp-events/',
   themeConfig: {
     nav: [
       { text: 'Guide', link: '/introduction' },
