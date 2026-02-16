@@ -1,5 +1,5 @@
 {
-  "$schema": "https://mintlify.com/docs.json",
+  "$schema": "https://mintlify.com/schema/mint.json",
   "theme": "venus",
   "name": "MCP Events (MCPE)",
   "description": "Real-time event subscriptions for MCP-compatible agents.",
