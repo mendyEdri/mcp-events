@@ -1,0 +1,87 @@
+{
+  "$schema": "https://mintlify.com/schema/mint.json",
+  "theme": "venus",
+  "name": "MCP Events (MCPE)",
+  "description": "Real-time event subscriptions for MCP-compatible agents.",
+  "colors": {
+    "primary": "#2563EB",
+    "light": "#60A5FA",
+    "dark": "#1D4ED8"
+  },
+  "favicon": "/docs/favicon.svg",
+  "navigation": [
+    {
+      "group": "Introduction",
+      "pages": [
+        "docs/introduction",
+        "docs/quickstart",
+        "docs/why-mcpe"
+      ]
+    },
+    {
+      "group": "Core Concepts",
+      "pages": [
+        "docs/concepts/protocol",
+        "docs/concepts/events",
+        "docs/concepts/subscriptions",
+        "docs/concepts/transports"
+      ]
+    },
+    {
+      "group": "Server SDK",
+      "pages": [
+        "docs/server/getting-started",
+        "docs/server/publishing-events",
+        "docs/server/delivery",
+        "docs/server/configuration"
+      ]
+    },
+    {
+      "group": "Client SDK",
+      "pages": [
+        "docs/client/getting-started",
+        "docs/client/subscribing",
+        "docs/client/event-handlers",
+        "docs/client/scheduling"
+      ]
+    },
+    {
+      "group": "API Reference",
+      "pages": [
+        "docs/api/server-api",
+        "docs/api/client-api",
+        "docs/api/types",
+        "docs/api/protocol-methods"
+      ]
+    },
+    {
+      "group": "Guides",
+      "pages": [
+        "docs/guides/mcp-integration",
+        "docs/guides/examples"
+      ]
+    },
+    {
+      "group": "Specification",
+      "pages": [
+        "docs/specification"
+      ]
+    }
+  ],
+  "tabs": [
+    {
+      "name": "API Reference",
+      "url": "docs/api"
+    }
+  ],
+  "anchors": [
+    {
+      "name": "GitHub",
+      "icon": "github",
+      "url": "https://github.com/anthropics/mcp-event"
+    }
+  ],
+  "footerSocials": {
+    "github": "https://github.com/anthropics/mcp-event"
+  }
+}
