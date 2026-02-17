@@ -1,124 +1,161 @@
 <template>
   <div class="hero-animation">
-    <svg viewBox="0 0 800 320" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <!-- External Sources (left) -->
-      <g class="sources">
-        <rect x="20" y="30" width="120" height="52" rx="10" class="source-box github" />
-        <text x="80" y="61" class="source-label">GitHub</text>
+    <svg viewBox="0 0 800 380" fill="none" xmlns="http://www.w3.org/2000/svg">
 
-        <rect x="20" y="110" width="120" height="52" rx="10" class="source-box slack" />
-        <text x="80" y="141" class="source-label">Slack</text>
-
-        <rect x="20" y="190" width="120" height="52" rx="10" class="source-box gmail" />
-        <text x="80" y="221" class="source-label">Gmail</text>
-
-        <rect x="20" y="255" width="120" height="52" rx="10" class="source-box calendar" />
-        <text x="80" y="286" class="source-label">Calendar</text>
-      </g>
-
-      <!-- MCPE Server (center) -->
-      <g class="server">
-        <rect x="280" y="70" width="180" height="180" rx="16" class="server-box" />
-        <text x="370" y="130" class="server-title">MCPE</text>
-        <text x="370" y="155" class="server-subtitle">Server</text>
-
-        <!-- Lightning bolt icon -->
-        <path d="M378 170 L366 198 L378 198 L370 218 L390 194 L378 194 Z" class="bolt" />
-      </g>
-
-      <!-- AI Agent (right) -->
+      <!-- ============ AI AGENT (center) ============ -->
       <g class="agent">
-        <rect x="600" y="95" width="170" height="130" rx="16" class="agent-box" />
-        <text x="685" y="145" class="agent-title">AI Agent</text>
-        <text x="685" y="170" class="agent-subtitle">LLM Subscriber</text>
+        <rect x="300" y="130" width="200" height="120" rx="18" class="agent-box" />
+        <text x="400" y="175" class="agent-title">AI Agent</text>
 
-        <!-- Sparkle icon -->
-        <circle cx="685" cy="195" r="3" class="sparkle s1" />
-        <circle cx="673" cy="195" r="2" class="sparkle s2" />
-        <circle cx="697" cy="195" r="2" class="sparkle s3" />
+        <!-- Sparkle dots -->
+        <circle cx="380" cy="200" r="3" class="sparkle s1" />
+        <circle cx="400" cy="200" r="3" class="sparkle s2" />
+        <circle cx="420" cy="200" r="3" class="sparkle s3" />
+
+        <text x="400" y="228" class="agent-hint">calls events_subscribe</text>
       </g>
 
-      <!-- Flow lines: Sources → Server -->
-      <g class="flow-lines-in">
-        <path d="M140 56 Q 210 56 280 140" class="flow-line in-1" />
-        <path d="M140 136 Q 210 136 280 155" class="flow-line in-2" />
-        <path d="M140 216 Q 210 216 280 175" class="flow-line in-3" />
-        <path d="M140 281 Q 210 281 280 200" class="flow-line in-4" />
+      <!-- ============ MCP SERVERS (around the agent) ============ -->
+
+      <!-- Top-left: GitHub MCP Server -->
+      <g class="server">
+        <rect x="40" y="20" width="160" height="72" rx="12" class="server-box" />
+        <text x="120" y="50" class="server-name">GitHub</text>
+        <text x="120" y="68" class="server-tag">MCP Server + MCPE</text>
       </g>
 
-      <!-- Flow line: Server → Agent (events delivered) -->
-      <path d="M460 160 L600 160" class="flow-line out" />
+      <!-- Top-right: Slack MCP Server -->
+      <g class="server">
+        <rect x="600" y="20" width="160" height="72" rx="12" class="server-box" />
+        <text x="680" y="50" class="server-name">Slack</text>
+        <text x="680" y="68" class="server-tag">MCP Server + MCPE</text>
+      </g>
 
-      <!-- Subscribe arrow: Agent → Server -->
-      <path d="M600 175 L460 175" class="subscribe-line" />
+      <!-- Bottom-left: Gmail MCP Server -->
+      <g class="server">
+        <rect x="40" y="290" width="160" height="72" rx="12" class="server-box" />
+        <text x="120" y="320" class="server-name">Gmail</text>
+        <text x="120" y="338" class="server-tag">MCP Server + MCPE</text>
+      </g>
 
-      <!-- Animated event dots: Sources → Server -->
-      <circle r="5" class="event-dot dot-1">
-        <animateMotion dur="2.5s" repeatCount="indefinite" begin="0s">
-          <mpath href="#path-1" />
+      <!-- Bottom-right: Custom MCP Server -->
+      <g class="server">
+        <rect x="600" y="290" width="160" height="72" rx="12" class="server-box" />
+        <text x="680" y="320" class="server-name">Your Server</text>
+        <text x="680" y="338" class="server-tag">MCP Server + MCPE</text>
+      </g>
+
+      <!-- ============ CONNECTION LINES ============ -->
+
+      <!-- Agent → GitHub (subscribe) -->
+      <path d="M320 150 Q 220 100 200 92" class="subscribe-line" />
+      <!-- GitHub → Agent (notify) -->
+      <path d="M200 80 Q 240 120 300 145" class="notify-line" />
+
+      <!-- Agent → Slack (subscribe) -->
+      <path d="M480 150 Q 580 100 600 92" class="subscribe-line" />
+      <!-- Slack → Agent (notify) -->
+      <path d="M600 80 Q 560 120 500 145" class="notify-line" />
+
+      <!-- Agent → Gmail (subscribe) -->
+      <path d="M320 230 Q 220 280 200 290" class="subscribe-line" />
+      <!-- Gmail → Agent (notify) -->
+      <path d="M200 302 Q 240 265 300 240" class="notify-line" />
+
+      <!-- Agent → Custom (subscribe) -->
+      <path d="M480 230 Q 580 280 600 290" class="subscribe-line" />
+      <!-- Custom → Agent (notify) -->
+      <path d="M600 302 Q 560 265 500 240" class="notify-line" />
+
+      <!-- ============ ANIMATED DOTS ============ -->
+
+      <!-- Subscribe dots: Agent → Servers (tool calls) -->
+      <circle r="4" class="sub-dot">
+        <animateMotion dur="3s" repeatCount="indefinite" begin="0s">
+          <mpath href="#sub-path-1" />
         </animateMotion>
       </circle>
-      <circle r="5" class="event-dot dot-2">
-        <animateMotion dur="2.8s" repeatCount="indefinite" begin="0.7s">
-          <mpath href="#path-2" />
+      <circle r="4" class="sub-dot">
+        <animateMotion dur="3s" repeatCount="indefinite" begin="1.5s">
+          <mpath href="#sub-path-2" />
         </animateMotion>
       </circle>
-      <circle r="5" class="event-dot dot-3">
-        <animateMotion dur="3s" repeatCount="indefinite" begin="1.4s">
-          <mpath href="#path-3" />
+      <circle r="4" class="sub-dot">
+        <animateMotion dur="3.2s" repeatCount="indefinite" begin="0.8s">
+          <mpath href="#sub-path-3" />
         </animateMotion>
       </circle>
-      <circle r="4" class="event-dot dot-4">
-        <animateMotion dur="3.2s" repeatCount="indefinite" begin="2s">
-          <mpath href="#path-4" />
+      <circle r="4" class="sub-dot">
+        <animateMotion dur="3.2s" repeatCount="indefinite" begin="2.2s">
+          <mpath href="#sub-path-4" />
         </animateMotion>
       </circle>
 
-      <!-- Animated event dots: Server → Agent -->
-      <circle r="6" class="event-dot dot-out">
-        <animateMotion dur="2s" repeatCount="indefinite" begin="1s">
-          <mpath href="#path-out" />
+      <!-- Event dots: Servers → Agent (notifications) -->
+      <circle r="5" class="evt-dot d1">
+        <animateMotion dur="2.2s" repeatCount="indefinite" begin="0.5s">
+          <mpath href="#evt-path-1" />
         </animateMotion>
       </circle>
-      <circle r="6" class="event-dot dot-out-2">
-        <animateMotion dur="2s" repeatCount="indefinite" begin="2.2s">
-          <mpath href="#path-out" />
+      <circle r="5" class="evt-dot d2">
+        <animateMotion dur="2.4s" repeatCount="indefinite" begin="1.8s">
+          <mpath href="#evt-path-2" />
+        </animateMotion>
+      </circle>
+      <circle r="5" class="evt-dot d3">
+        <animateMotion dur="2.6s" repeatCount="indefinite" begin="1s">
+          <mpath href="#evt-path-3" />
+        </animateMotion>
+      </circle>
+      <circle r="5" class="evt-dot d4">
+        <animateMotion dur="2.5s" repeatCount="indefinite" begin="2.5s">
+          <mpath href="#evt-path-4" />
         </animateMotion>
       </circle>
 
-      <!-- Subscribe pulse: Agent → Server -->
-      <circle r="4" class="subscribe-dot">
-        <animateMotion dur="3s" repeatCount="indefinite" begin="0.5s">
-          <mpath href="#path-sub" />
+      <!-- Second wave of event dots -->
+      <circle r="4" class="evt-dot d1">
+        <animateMotion dur="2.2s" repeatCount="indefinite" begin="1.6s">
+          <mpath href="#evt-path-1" />
+        </animateMotion>
+      </circle>
+      <circle r="4" class="evt-dot d2">
+        <animateMotion dur="2.4s" repeatCount="indefinite" begin="0.2s">
+          <mpath href="#evt-path-2" />
         </animateMotion>
       </circle>
 
-      <!-- Hidden motion paths -->
+      <!-- ============ LABELS ============ -->
+      <text x="230" y="108" class="label label-sub">tool call</text>
+      <text x="565" y="108" class="label label-sub">tool call</text>
+      <text x="248" y="140" class="label label-evt">event</text>
+      <text x="548" y="140" class="label label-evt">event</text>
+      <text x="230" y="278" class="label label-sub">tool call</text>
+      <text x="565" y="278" class="label label-sub">tool call</text>
+      <text x="248" y="248" class="label label-evt">event</text>
+      <text x="548" y="248" class="label label-evt">event</text>
+
+      <!-- ============ HIDDEN MOTION PATHS ============ -->
       <defs>
-        <path id="path-1" d="M140 56 Q 210 56 280 140" />
-        <path id="path-2" d="M140 136 Q 210 136 280 155" />
-        <path id="path-3" d="M140 216 Q 210 216 280 175" />
-        <path id="path-4" d="M140 281 Q 210 281 280 200" />
-        <path id="path-out" d="M460 160 L600 160" />
-        <path id="path-sub" d="M600 175 L460 175" />
+        <!-- Subscribe paths: Agent → Server -->
+        <path id="sub-path-1" d="M320 150 Q 220 100 200 92" />
+        <path id="sub-path-2" d="M480 150 Q 580 100 600 92" />
+        <path id="sub-path-3" d="M320 230 Q 220 280 200 290" />
+        <path id="sub-path-4" d="M480 230 Q 580 280 600 290" />
+        <!-- Event paths: Server → Agent -->
+        <path id="evt-path-1" d="M200 80 Q 240 120 300 145" />
+        <path id="evt-path-2" d="M600 80 Q 560 120 500 145" />
+        <path id="evt-path-3" d="M200 302 Q 240 265 300 240" />
+        <path id="evt-path-4" d="M600 302 Q 560 265 500 240" />
       </defs>
 
-      <!-- Labels -->
-      <text x="210" y="28" class="label">Events</text>
-      <text x="520" y="148" class="label">Notify</text>
-      <text x="512" y="196" class="label subscribe-label">Subscribe</text>
-
-      <!-- Small arrowheads -->
-      <polygon points="278,138 270,132 270,144" class="arrow-in" />
-      <polygon points="598,157 606,153 606,163" class="arrow-out" />
-      <polygon points="462,172 454,168 454,178" class="arrow-sub" />
     </svg>
   </div>
 </template>
 
 <style scoped>
 .hero-animation {
-  max-width: 720px;
+  max-width: 740px;
   margin: 0 auto 2rem;
   padding: 0 1rem;
 }
@@ -128,158 +165,123 @@ svg {
   height: auto;
 }
 
-/* Source boxes */
-.source-box {
-  fill: var(--vp-c-bg-soft);
-  stroke: var(--vp-c-border);
-  stroke-width: 1.5;
-  transition: fill 0.3s;
+/* Agent (center) */
+.agent-box {
+  fill: var(--vp-c-brand-soft);
+  stroke: var(--vp-c-brand-1);
+  stroke-width: 2.5;
 }
 
-.source-label {
-  font-size: 14px;
-  font-weight: 600;
+.agent-title {
+  font-size: 22px;
+  font-weight: 800;
   fill: var(--vp-c-text-1);
   text-anchor: middle;
   font-family: var(--vp-font-family-base);
 }
 
-/* Server box */
-.server-box {
-  fill: var(--vp-c-brand-soft);
-  stroke: var(--vp-c-brand-1);
-  stroke-width: 2;
-}
-
-.server-title {
-  font-size: 24px;
-  font-weight: 800;
-  fill: var(--vp-c-brand-1);
-  text-anchor: middle;
-  font-family: var(--vp-font-family-base);
-}
-
-.server-subtitle {
-  font-size: 13px;
+.agent-hint {
+  font-size: 10px;
   font-weight: 500;
-  fill: var(--vp-c-text-2);
+  fill: var(--vp-c-text-3);
   text-anchor: middle;
-  font-family: var(--vp-font-family-base);
+  font-family: var(--vp-font-family-mono);
+  opacity: 0.7;
 }
 
-.bolt {
+.sparkle {
   fill: var(--vp-c-brand-1);
-  opacity: 0.8;
-  animation: pulse-bolt 2s ease-in-out infinite;
 }
+.sparkle.s1 { animation: twinkle 1.5s ease-in-out infinite; }
+.sparkle.s2 { animation: twinkle 1.5s ease-in-out infinite 0.5s; }
+.sparkle.s3 { animation: twinkle 1.5s ease-in-out infinite 1s; }
 
-@keyframes pulse-bolt {
-  0%, 100% { opacity: 0.6; }
+@keyframes twinkle {
+  0%, 100% { opacity: 0.3; }
   50% { opacity: 1; }
 }
 
-/* Agent box */
-.agent-box {
+/* MCP Servers (around) */
+.server-box {
   fill: var(--vp-c-bg-soft);
-  stroke: var(--vp-c-brand-2);
-  stroke-width: 2;
+  stroke: var(--vp-c-border);
+  stroke-width: 1.5;
 }
 
-.agent-title {
-  font-size: 20px;
+.server-name {
+  font-size: 16px;
   font-weight: 700;
   fill: var(--vp-c-text-1);
   text-anchor: middle;
   font-family: var(--vp-font-family-base);
 }
 
-.agent-subtitle {
-  font-size: 11px;
+.server-tag {
+  font-size: 9px;
   font-weight: 500;
   fill: var(--vp-c-text-3);
   text-anchor: middle;
-  font-family: var(--vp-font-family-base);
+  font-family: var(--vp-font-family-mono);
+  letter-spacing: 0.3px;
 }
 
-.sparkle {
-  fill: var(--vp-c-brand-1);
-}
-
-.sparkle.s1 { animation: twinkle 1.5s ease-in-out infinite; }
-.sparkle.s2 { animation: twinkle 1.5s ease-in-out infinite 0.5s; }
-.sparkle.s3 { animation: twinkle 1.5s ease-in-out infinite 1s; }
-
-@keyframes twinkle {
-  0%, 100% { opacity: 0.3; r: 2; }
-  50% { opacity: 1; r: 3.5; }
-}
-
-/* Flow lines */
-.flow-line {
-  stroke: var(--vp-c-border);
-  stroke-width: 1.5;
-  fill: none;
-  stroke-dasharray: 6 4;
-}
-
-.flow-line.out {
-  stroke: var(--vp-c-brand-1);
-  stroke-width: 2;
-  stroke-dasharray: none;
-}
-
+/* Lines */
 .subscribe-line {
   stroke: var(--vp-c-brand-2);
   stroke-width: 1.5;
-  stroke-dasharray: 4 4;
+  stroke-dasharray: 5 4;
   fill: none;
+  opacity: 0.5;
 }
 
-/* Animated dots */
-.event-dot {
-  opacity: 0.9;
-}
-
-.dot-1 { fill: #6C5CE7; }
-.dot-2 { fill: #E17055; }
-.dot-3 { fill: #00B894; }
-.dot-4 { fill: #FDCB6E; }
-.dot-out { fill: var(--vp-c-brand-1); }
-.dot-out-2 { fill: var(--vp-c-brand-2); }
-
-.subscribe-dot {
-  fill: var(--vp-c-brand-2);
+.notify-line {
+  stroke: var(--vp-c-brand-1);
+  stroke-width: 2;
+  fill: none;
   opacity: 0.7;
 }
 
+/* Animated dots */
+.sub-dot {
+  fill: var(--vp-c-brand-2);
+  opacity: 0.8;
+}
+
+.evt-dot {
+  opacity: 0.9;
+}
+.evt-dot.d1 { fill: #6C5CE7; }
+.evt-dot.d2 { fill: #E17055; }
+.evt-dot.d3 { fill: #00B894; }
+.evt-dot.d4 { fill: #FDCB6E; }
+
 /* Labels */
 .label {
-  font-size: 11px;
+  font-size: 9px;
   font-weight: 600;
-  fill: var(--vp-c-text-3);
+  font-family: var(--vp-font-family-mono);
   text-anchor: middle;
-  font-family: var(--vp-font-family-base);
-  text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 0.5px;
 }
 
-.subscribe-label {
+.label-sub {
   fill: var(--vp-c-brand-2);
+  opacity: 0.6;
 }
 
-/* Arrows */
-.arrow-in { fill: var(--vp-c-border); }
-.arrow-out { fill: var(--vp-c-brand-1); }
-.arrow-sub { fill: var(--vp-c-brand-2); }
+.label-evt {
+  fill: var(--vp-c-brand-1);
+  opacity: 0.6;
+}
 
 /* Mobile */
 @media (max-width: 640px) {
   .hero-animation {
     margin: 0 auto 1rem;
   }
-
-  .source-label { font-size: 11px; }
-  .server-title { font-size: 18px; }
-  .agent-title { font-size: 16px; }
+  .server-name { font-size: 13px; }
+  .server-tag { font-size: 7px; }
+  .agent-title { font-size: 18px; }
+  .label { font-size: 7px; }
 }
 </style>
