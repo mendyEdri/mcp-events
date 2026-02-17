@@ -1,152 +1,161 @@
 <template>
   <div class="hero-animation">
-    <svg viewBox="0 0 800 380" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <svg viewBox="0 0 800 340" fill="none" xmlns="http://www.w3.org/2000/svg">
 
-      <!-- ============ AI AGENT (center) ============ -->
+      <!-- ============ MCP SERVERS (left column) ============ -->
+
+      <g class="server">
+        <rect x="30" y="20" width="180" height="60" rx="12" class="server-box" />
+        <text x="120" y="47" class="server-name">GitHub</text>
+        <text x="120" y="63" class="server-tag">MCP Server + MCPE</text>
+      </g>
+
+      <g class="server">
+        <rect x="30" y="110" width="180" height="60" rx="12" class="server-box" />
+        <text x="120" y="137" class="server-name">Slack</text>
+        <text x="120" y="153" class="server-tag">MCP Server + MCPE</text>
+      </g>
+
+      <g class="server">
+        <rect x="30" y="200" width="180" height="60" rx="12" class="server-box" />
+        <text x="120" y="227" class="server-name">Gmail</text>
+        <text x="120" y="243" class="server-tag">MCP Server + MCPE</text>
+      </g>
+
+      <g class="server">
+        <rect x="30" y="290" width="180" height="60" rx="12" class="server-box" />
+        <text x="120" y="317" class="server-name">Your Server</text>
+        <text x="120" y="333" class="server-tag">MCP Server + MCPE</text>
+      </g>
+
+      <!-- ============ AI AGENT (right) ============ -->
+
       <g class="agent">
-        <rect x="300" y="130" width="200" height="120" rx="18" class="agent-box" />
-        <text x="400" y="175" class="agent-title">AI Agent</text>
+        <rect x="570" y="100" width="200" height="170" rx="18" class="agent-box" />
+        <text x="670" y="170" class="agent-title">AI Agent</text>
 
-        <!-- Sparkle dots -->
-        <circle cx="380" cy="200" r="3" class="sparkle s1" />
-        <circle cx="400" cy="200" r="3" class="sparkle s2" />
-        <circle cx="420" cy="200" r="3" class="sparkle s3" />
+        <!-- Thinking dots -->
+        <circle cx="650" cy="200" r="3.5" class="sparkle s1" />
+        <circle cx="670" cy="200" r="3.5" class="sparkle s2" />
+        <circle cx="690" cy="200" r="3.5" class="sparkle s3" />
 
-        <text x="400" y="228" class="agent-hint">calls events_subscribe</text>
-      </g>
-
-      <!-- ============ MCP SERVERS (around the agent) ============ -->
-
-      <!-- Top-left: GitHub MCP Server -->
-      <g class="server">
-        <rect x="40" y="20" width="160" height="72" rx="12" class="server-box" />
-        <text x="120" y="50" class="server-name">GitHub</text>
-        <text x="120" y="68" class="server-tag">MCP Server + MCPE</text>
-      </g>
-
-      <!-- Top-right: Slack MCP Server -->
-      <g class="server">
-        <rect x="600" y="20" width="160" height="72" rx="12" class="server-box" />
-        <text x="680" y="50" class="server-name">Slack</text>
-        <text x="680" y="68" class="server-tag">MCP Server + MCPE</text>
-      </g>
-
-      <!-- Bottom-left: Gmail MCP Server -->
-      <g class="server">
-        <rect x="40" y="290" width="160" height="72" rx="12" class="server-box" />
-        <text x="120" y="320" class="server-name">Gmail</text>
-        <text x="120" y="338" class="server-tag">MCP Server + MCPE</text>
-      </g>
-
-      <!-- Bottom-right: Custom MCP Server -->
-      <g class="server">
-        <rect x="600" y="290" width="160" height="72" rx="12" class="server-box" />
-        <text x="680" y="320" class="server-name">Your Server</text>
-        <text x="680" y="338" class="server-tag">MCP Server + MCPE</text>
+        <text x="670" y="240" class="agent-hint">LLM</text>
       </g>
 
       <!-- ============ CONNECTION LINES ============ -->
 
-      <!-- Agent → GitHub (subscribe) -->
-      <path d="M320 150 Q 220 100 200 92" class="subscribe-line" />
-      <!-- GitHub → Agent (notify) -->
-      <path d="M200 80 Q 240 120 300 145" class="notify-line" />
+      <!-- Row 1: GitHub -->
+      <line x1="210" y1="42" x2="570" y2="155" class="evt-line" />
+      <line x1="570" y1="165" x2="210" y2="58" class="sub-line" />
 
-      <!-- Agent → Slack (subscribe) -->
-      <path d="M480 150 Q 580 100 600 92" class="subscribe-line" />
-      <!-- Slack → Agent (notify) -->
-      <path d="M600 80 Q 560 120 500 145" class="notify-line" />
+      <!-- Row 2: Slack -->
+      <line x1="210" y1="135" x2="570" y2="175" class="evt-line" />
+      <line x1="570" y1="185" x2="210" y2="148" class="sub-line" />
 
-      <!-- Agent → Gmail (subscribe) -->
-      <path d="M320 230 Q 220 280 200 290" class="subscribe-line" />
-      <!-- Gmail → Agent (notify) -->
-      <path d="M200 302 Q 240 265 300 240" class="notify-line" />
+      <!-- Row 3: Gmail -->
+      <line x1="210" y1="225" x2="570" y2="195" class="evt-line" />
+      <line x1="570" y1="205" x2="210" y2="238" class="sub-line" />
 
-      <!-- Agent → Custom (subscribe) -->
-      <path d="M480 230 Q 580 280 600 290" class="subscribe-line" />
-      <!-- Custom → Agent (notify) -->
-      <path d="M600 302 Q 560 265 500 240" class="notify-line" />
+      <!-- Row 4: Custom -->
+      <line x1="210" y1="315" x2="570" y2="215" class="evt-line" />
+      <line x1="570" y1="225" x2="210" y2="328" class="sub-line" />
+
+      <!-- ============ LABELS (centered on each line pair) ============ -->
+
+      <text x="380" y="86" class="label label-evt">event</text>
+      <text x="400" y="106" class="label label-sub">subscribe</text>
+
+      <text x="375" y="148" class="label label-evt">event</text>
+      <text x="395" y="170" class="label label-sub">subscribe</text>
+
+      <text x="375" y="210" class="label label-evt">event</text>
+      <text x="395" y="228" class="label label-sub">subscribe</text>
+
+      <text x="380" y="262" class="label label-evt">event</text>
+      <text x="400" y="282" class="label label-sub">subscribe</text>
+
+      <!-- ============ ARROWHEADS ============ -->
+
+      <!-- Event arrows (pointing right → agent) -->
+      <polygon points="568,154 558,149 558,159" class="arrow-evt" />
+      <polygon points="568,174 558,169 558,179" class="arrow-evt" />
+      <polygon points="568,194 558,189 558,199" class="arrow-evt" />
+      <polygon points="568,214 558,209 558,219" class="arrow-evt" />
+
+      <!-- Subscribe arrows (pointing left → server) -->
+      <polygon points="212,58 222,53 222,63" class="arrow-sub" />
+      <polygon points="212,148 222,143 222,153" class="arrow-sub" />
+      <polygon points="212,238 222,233 222,243" class="arrow-sub" />
+      <polygon points="212,328 222,323 222,333" class="arrow-sub" />
 
       <!-- ============ ANIMATED DOTS ============ -->
 
-      <!-- Subscribe dots: Agent → Servers (tool calls) -->
-      <circle r="4" class="sub-dot">
-        <animateMotion dur="3s" repeatCount="indefinite" begin="0s">
-          <mpath href="#sub-path-1" />
-        </animateMotion>
-      </circle>
-      <circle r="4" class="sub-dot">
-        <animateMotion dur="3s" repeatCount="indefinite" begin="1.5s">
-          <mpath href="#sub-path-2" />
-        </animateMotion>
-      </circle>
-      <circle r="4" class="sub-dot">
-        <animateMotion dur="3.2s" repeatCount="indefinite" begin="0.8s">
-          <mpath href="#sub-path-3" />
-        </animateMotion>
-      </circle>
-      <circle r="4" class="sub-dot">
-        <animateMotion dur="3.2s" repeatCount="indefinite" begin="2.2s">
-          <mpath href="#sub-path-4" />
-        </animateMotion>
-      </circle>
-
-      <!-- Event dots: Servers → Agent (notifications) -->
+      <!-- Event dots: Server → Agent -->
       <circle r="5" class="evt-dot d1">
-        <animateMotion dur="2.2s" repeatCount="indefinite" begin="0.5s">
-          <mpath href="#evt-path-1" />
+        <animateMotion dur="2.5s" repeatCount="indefinite" begin="0s">
+          <mpath href="#evt-1" />
         </animateMotion>
       </circle>
       <circle r="5" class="evt-dot d2">
-        <animateMotion dur="2.4s" repeatCount="indefinite" begin="1.8s">
-          <mpath href="#evt-path-2" />
+        <animateMotion dur="2.8s" repeatCount="indefinite" begin="0.8s">
+          <mpath href="#evt-2" />
         </animateMotion>
       </circle>
       <circle r="5" class="evt-dot d3">
-        <animateMotion dur="2.6s" repeatCount="indefinite" begin="1s">
-          <mpath href="#evt-path-3" />
+        <animateMotion dur="2.6s" repeatCount="indefinite" begin="1.6s">
+          <mpath href="#evt-3" />
         </animateMotion>
       </circle>
       <circle r="5" class="evt-dot d4">
-        <animateMotion dur="2.5s" repeatCount="indefinite" begin="2.5s">
-          <mpath href="#evt-path-4" />
+        <animateMotion dur="3s" repeatCount="indefinite" begin="2.2s">
+          <mpath href="#evt-4" />
         </animateMotion>
       </circle>
 
-      <!-- Second wave of event dots -->
+      <!-- Extra event dots (staggered) -->
       <circle r="4" class="evt-dot d1">
-        <animateMotion dur="2.2s" repeatCount="indefinite" begin="1.6s">
-          <mpath href="#evt-path-1" />
+        <animateMotion dur="2.5s" repeatCount="indefinite" begin="1.3s">
+          <mpath href="#evt-1" />
         </animateMotion>
       </circle>
-      <circle r="4" class="evt-dot d2">
-        <animateMotion dur="2.4s" repeatCount="indefinite" begin="0.2s">
-          <mpath href="#evt-path-2" />
+      <circle r="4" class="evt-dot d3">
+        <animateMotion dur="2.6s" repeatCount="indefinite" begin="0.3s">
+          <mpath href="#evt-3" />
         </animateMotion>
       </circle>
 
-      <!-- ============ LABELS ============ -->
-      <text x="230" y="108" class="label label-sub">tool call</text>
-      <text x="565" y="108" class="label label-sub">tool call</text>
-      <text x="248" y="140" class="label label-evt">event</text>
-      <text x="548" y="140" class="label label-evt">event</text>
-      <text x="230" y="278" class="label label-sub">tool call</text>
-      <text x="565" y="278" class="label label-sub">tool call</text>
-      <text x="248" y="248" class="label label-evt">event</text>
-      <text x="548" y="248" class="label label-evt">event</text>
+      <!-- Subscribe dots: Agent → Server -->
+      <circle r="4" class="sub-dot">
+        <animateMotion dur="3s" repeatCount="indefinite" begin="0.5s">
+          <mpath href="#sub-1" />
+        </animateMotion>
+      </circle>
+      <circle r="4" class="sub-dot">
+        <animateMotion dur="3.2s" repeatCount="indefinite" begin="2s">
+          <mpath href="#sub-2" />
+        </animateMotion>
+      </circle>
+      <circle r="4" class="sub-dot">
+        <animateMotion dur="3.4s" repeatCount="indefinite" begin="1s">
+          <mpath href="#sub-3" />
+        </animateMotion>
+      </circle>
+      <circle r="4" class="sub-dot">
+        <animateMotion dur="3.1s" repeatCount="indefinite" begin="2.5s">
+          <mpath href="#sub-4" />
+        </animateMotion>
+      </circle>
 
-      <!-- ============ HIDDEN MOTION PATHS ============ -->
+      <!-- ============ MOTION PATHS ============ -->
       <defs>
-        <!-- Subscribe paths: Agent → Server -->
-        <path id="sub-path-1" d="M320 150 Q 220 100 200 92" />
-        <path id="sub-path-2" d="M480 150 Q 580 100 600 92" />
-        <path id="sub-path-3" d="M320 230 Q 220 280 200 290" />
-        <path id="sub-path-4" d="M480 230 Q 580 280 600 290" />
-        <!-- Event paths: Server → Agent -->
-        <path id="evt-path-1" d="M200 80 Q 240 120 300 145" />
-        <path id="evt-path-2" d="M600 80 Q 560 120 500 145" />
-        <path id="evt-path-3" d="M200 302 Q 240 265 300 240" />
-        <path id="evt-path-4" d="M600 302 Q 560 265 500 240" />
+        <path id="evt-1" d="M210 42 L570 155" />
+        <path id="evt-2" d="M210 135 L570 175" />
+        <path id="evt-3" d="M210 225 L570 195" />
+        <path id="evt-4" d="M210 315 L570 215" />
+        <path id="sub-1" d="M570 165 L210 58" />
+        <path id="sub-2" d="M570 185 L210 148" />
+        <path id="sub-3" d="M570 205 L210 238" />
+        <path id="sub-4" d="M570 225 L210 328" />
       </defs>
 
     </svg>
@@ -165,7 +174,7 @@ svg {
   height: auto;
 }
 
-/* Agent (center) */
+/* Agent */
 .agent-box {
   fill: var(--vp-c-brand-soft);
   stroke: var(--vp-c-brand-1);
@@ -173,7 +182,7 @@ svg {
 }
 
 .agent-title {
-  font-size: 22px;
+  font-size: 24px;
   font-weight: 800;
   fill: var(--vp-c-text-1);
   text-anchor: middle;
@@ -181,27 +190,27 @@ svg {
 }
 
 .agent-hint {
-  font-size: 10px;
-  font-weight: 500;
+  font-size: 13px;
+  font-weight: 600;
   fill: var(--vp-c-text-3);
   text-anchor: middle;
-  font-family: var(--vp-font-family-mono);
-  opacity: 0.7;
+  font-family: var(--vp-font-family-base);
+  opacity: 0.5;
 }
 
 .sparkle {
   fill: var(--vp-c-brand-1);
 }
-.sparkle.s1 { animation: twinkle 1.5s ease-in-out infinite; }
-.sparkle.s2 { animation: twinkle 1.5s ease-in-out infinite 0.5s; }
-.sparkle.s3 { animation: twinkle 1.5s ease-in-out infinite 1s; }
+.sparkle.s1 { animation: twinkle 1.8s ease-in-out infinite; }
+.sparkle.s2 { animation: twinkle 1.8s ease-in-out infinite 0.6s; }
+.sparkle.s3 { animation: twinkle 1.8s ease-in-out infinite 1.2s; }
 
 @keyframes twinkle {
-  0%, 100% { opacity: 0.3; }
+  0%, 100% { opacity: 0.2; }
   50% { opacity: 1; }
 }
 
-/* MCP Servers (around) */
+/* Servers */
 .server-box {
   fill: var(--vp-c-bg-soft);
   stroke: var(--vp-c-border);
@@ -222,56 +231,55 @@ svg {
   fill: var(--vp-c-text-3);
   text-anchor: middle;
   font-family: var(--vp-font-family-mono);
-  letter-spacing: 0.3px;
 }
 
 /* Lines */
-.subscribe-line {
-  stroke: var(--vp-c-brand-2);
+.evt-line {
+  stroke: var(--vp-c-brand-1);
   stroke-width: 1.5;
-  stroke-dasharray: 5 4;
-  fill: none;
-  opacity: 0.5;
+  opacity: 0.35;
 }
 
-.notify-line {
-  stroke: var(--vp-c-brand-1);
-  stroke-width: 2;
-  fill: none;
-  opacity: 0.7;
+.sub-line {
+  stroke: var(--vp-c-brand-2);
+  stroke-width: 1;
+  stroke-dasharray: 6 4;
+  opacity: 0.3;
 }
+
+/* Arrows */
+.arrow-evt { fill: var(--vp-c-brand-1); opacity: 0.5; }
+.arrow-sub { fill: var(--vp-c-brand-2); opacity: 0.4; }
 
 /* Animated dots */
-.sub-dot {
-  fill: var(--vp-c-brand-2);
-  opacity: 0.8;
-}
-
-.evt-dot {
-  opacity: 0.9;
-}
+.evt-dot { opacity: 0.9; }
 .evt-dot.d1 { fill: #6C5CE7; }
 .evt-dot.d2 { fill: #E17055; }
 .evt-dot.d3 { fill: #00B894; }
 .evt-dot.d4 { fill: #FDCB6E; }
 
+.sub-dot {
+  fill: var(--vp-c-brand-2);
+  opacity: 0.7;
+}
+
 /* Labels */
 .label {
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 600;
   font-family: var(--vp-font-family-mono);
   text-anchor: middle;
   letter-spacing: 0.5px;
 }
 
-.label-sub {
-  fill: var(--vp-c-brand-2);
-  opacity: 0.6;
-}
-
 .label-evt {
   fill: var(--vp-c-brand-1);
-  opacity: 0.6;
+  opacity: 0.5;
+}
+
+.label-sub {
+  fill: var(--vp-c-brand-2);
+  opacity: 0.45;
 }
 
 /* Mobile */
@@ -282,6 +290,6 @@ svg {
   .server-name { font-size: 13px; }
   .server-tag { font-size: 7px; }
   .agent-title { font-size: 18px; }
-  .label { font-size: 7px; }
+  .label { font-size: 8px; }
 }
 </style>
