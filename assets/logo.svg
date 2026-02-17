@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6C5CE7"/>
+      <stop offset="100%" stop-color="#0984E3"/>
+    </linearGradient>
+    <linearGradient id="bolt" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFEAA7"/>
+      <stop offset="100%" stop-color="#FDCB6E"/>
+    </linearGradient>
+    <linearGradient id="ring1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#74B9FF"/>
+      <stop offset="100%" stop-color="#A29BFE"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Rounded square background -->
+  <rect x="16" y="16" width="480" height="480" rx="96" fill="url(#bg)"/>
+
+  <!-- Outer broadcast ring -->
+  <path d="M156 148c-54 54-54 162 0 216" stroke="url(#ring1)" stroke-width="20" stroke-linecap="round" fill="none" opacity="0.5"/>
+  <path d="M356 148c54 54 54 162 0 216" stroke="url(#ring1)" stroke-width="20" stroke-linecap="round" fill="none" opacity="0.5"/>
+
+  <!-- Inner broadcast ring -->
+  <path d="M192 188c-34 34-34 102 0 136" stroke="url(#ring1)" stroke-width="20" stroke-linecap="round" fill="none" opacity="0.75"/>
+  <path d="M320 188c34 34 34 102 0 136" stroke="url(#ring1)" stroke-width="20" stroke-linecap="round" fill="none" opacity="0.75"/>
+
+  <!-- Center lightning bolt (event) -->
+  <path d="M272 160 L232 268 L272 268 L240 352 L312 244 L272 244 Z" fill="url(#bolt)" stroke="#FFF" stroke-width="4" stroke-linejoin="round"/>
+
+  <!-- Small dots representing events flowing -->
+  <circle cx="136" cy="210" r="8" fill="#74B9FF" opacity="0.6"/>
+  <circle cx="376" cy="302" r="8" fill="#74B9FF" opacity="0.6"/>
+  <circle cx="142" cy="320" r="6" fill="#A29BFE" opacity="0.5"/>
+  <circle cx="370" cy="192" r="6" fill="#A29BFE" opacity="0.5"/>
+</svg>

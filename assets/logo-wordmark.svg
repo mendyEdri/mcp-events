@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 200" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6C5CE7"/>
+      <stop offset="100%" stop-color="#0984E3"/>
+    </linearGradient>
+    <linearGradient id="bolt" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFEAA7"/>
+      <stop offset="100%" stop-color="#FDCB6E"/>
+    </linearGradient>
+    <linearGradient id="ring" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#74B9FF"/>
+      <stop offset="100%" stop-color="#A29BFE"/>
+    </linearGradient>
+    <linearGradient id="text-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#6C5CE7"/>
+      <stop offset="100%" stop-color="#0984E3"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Icon: rounded square -->
+  <rect x="12" y="12" width="176" height="176" rx="38" fill="url(#bg)"/>
+
+  <!-- Broadcast arcs -->
+  <path d="M60 56c-22 22-22 66 0 88" stroke="url(#ring)" stroke-width="8" stroke-linecap="round" fill="none" opacity="0.5"/>
+  <path d="M140 56c22 22 22 66 0 88" stroke="url(#ring)" stroke-width="8" stroke-linecap="round" fill="none" opacity="0.5"/>
+  <path d="M74 72c-14 14-14 42 0 56" stroke="url(#ring)" stroke-width="8" stroke-linecap="round" fill="none" opacity="0.75"/>
+  <path d="M126 72c14 14 14 42 0 56" stroke="url(#ring)" stroke-width="8" stroke-linecap="round" fill="none" opacity="0.75"/>
+
+  <!-- Lightning bolt -->
+  <path d="M106 52 L90 100 L106 100 L94 136 L122 92 L106 92 Z" fill="url(#bolt)" stroke="#FFF" stroke-width="1.5" stroke-linejoin="round"/>
+
+  <!-- Text: MCPE -->
+  <text x="220" y="126" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-size="88" font-weight="800" fill="url(#text-grad)" letter-spacing="-2">MCPE</text>
+
+  <!-- Subtitle -->
+  <text x="222" y="162" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-size="22" font-weight="500" fill="#636E72" letter-spacing="4">MCP EVENTS</text>
+</svg>
