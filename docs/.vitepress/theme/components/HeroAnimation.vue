@@ -1,92 +1,92 @@
 <template>
   <div class="hero-animation">
-    <svg viewBox="0 0 800 340" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <svg viewBox="0 0 760 300" fill="none" xmlns="http://www.w3.org/2000/svg">
 
       <!-- ============ MCP SERVERS (left column) ============ -->
 
       <g class="server">
-        <rect x="30" y="20" width="180" height="60" rx="12" class="server-box" />
-        <text x="120" y="47" class="server-name">GitHub</text>
-        <text x="120" y="63" class="server-tag">MCP Server + MCPE</text>
+        <rect x="20" y="10" width="170" height="52" rx="10" class="server-box" />
+        <text x="105" y="34" class="server-name">GitHub</text>
+        <text x="105" y="48" class="server-tag">MCP Server + MCPE</text>
       </g>
 
       <g class="server">
-        <rect x="30" y="110" width="180" height="60" rx="12" class="server-box" />
-        <text x="120" y="137" class="server-name">Slack</text>
-        <text x="120" y="153" class="server-tag">MCP Server + MCPE</text>
+        <rect x="20" y="80" width="170" height="52" rx="10" class="server-box" />
+        <text x="105" y="104" class="server-name">Slack</text>
+        <text x="105" y="118" class="server-tag">MCP Server + MCPE</text>
       </g>
 
       <g class="server">
-        <rect x="30" y="200" width="180" height="60" rx="12" class="server-box" />
-        <text x="120" y="227" class="server-name">Gmail</text>
-        <text x="120" y="243" class="server-tag">MCP Server + MCPE</text>
+        <rect x="20" y="150" width="170" height="52" rx="10" class="server-box" />
+        <text x="105" y="174" class="server-name">Gmail</text>
+        <text x="105" y="188" class="server-tag">MCP Server + MCPE</text>
       </g>
 
       <g class="server">
-        <rect x="30" y="290" width="180" height="60" rx="12" class="server-box" />
-        <text x="120" y="317" class="server-name">Your Server</text>
-        <text x="120" y="333" class="server-tag">MCP Server + MCPE</text>
+        <rect x="20" y="220" width="170" height="52" rx="10" class="server-box" />
+        <text x="105" y="244" class="server-name">Your Server</text>
+        <text x="105" y="258" class="server-tag">MCP Server + MCPE</text>
       </g>
 
       <!-- ============ AI AGENT (right) ============ -->
 
       <g class="agent">
-        <rect x="570" y="100" width="200" height="170" rx="18" class="agent-box" />
-        <text x="670" y="170" class="agent-title">AI Agent</text>
+        <rect x="545" y="55" width="195" height="172" rx="18" class="agent-box" />
+        <text x="642" y="130" class="agent-title">AI Agent</text>
 
         <!-- Thinking dots -->
-        <circle cx="650" cy="200" r="3.5" class="sparkle s1" />
-        <circle cx="670" cy="200" r="3.5" class="sparkle s2" />
-        <circle cx="690" cy="200" r="3.5" class="sparkle s3" />
+        <circle cx="622" cy="158" r="3.5" class="sparkle s1" />
+        <circle cx="642" cy="158" r="3.5" class="sparkle s2" />
+        <circle cx="662" cy="158" r="3.5" class="sparkle s3" />
 
-        <text x="670" y="240" class="agent-hint">LLM</text>
+        <text x="642" y="198" class="agent-hint">LLM</text>
       </g>
 
       <!-- ============ CONNECTION LINES ============ -->
 
       <!-- Row 1: GitHub -->
-      <line x1="210" y1="42" x2="570" y2="155" class="evt-line" />
-      <line x1="570" y1="165" x2="210" y2="58" class="sub-line" />
+      <line x1="190" y1="30" x2="545" y2="110" class="evt-line" />
+      <line x1="545" y1="120" x2="190" y2="42" class="sub-line" />
 
       <!-- Row 2: Slack -->
-      <line x1="210" y1="135" x2="570" y2="175" class="evt-line" />
-      <line x1="570" y1="185" x2="210" y2="148" class="sub-line" />
+      <line x1="190" y1="100" x2="545" y2="130" class="evt-line" />
+      <line x1="545" y1="140" x2="190" y2="112" class="sub-line" />
 
       <!-- Row 3: Gmail -->
-      <line x1="210" y1="225" x2="570" y2="195" class="evt-line" />
-      <line x1="570" y1="205" x2="210" y2="238" class="sub-line" />
+      <line x1="190" y1="170" x2="545" y2="152" class="evt-line" />
+      <line x1="545" y1="162" x2="190" y2="182" class="sub-line" />
 
       <!-- Row 4: Custom -->
-      <line x1="210" y1="315" x2="570" y2="215" class="evt-line" />
-      <line x1="570" y1="225" x2="210" y2="328" class="sub-line" />
+      <line x1="190" y1="240" x2="545" y2="172" class="evt-line" />
+      <line x1="545" y1="182" x2="190" y2="252" class="sub-line" />
 
-      <!-- ============ LABELS (centered on each line pair) ============ -->
+      <!-- ============ LABELS ============ -->
 
-      <text x="380" y="86" class="label label-evt">event</text>
-      <text x="400" y="106" class="label label-sub">subscribe</text>
+      <text x="360" y="60" class="label label-evt">event</text>
+      <text x="375" y="78" class="label label-sub">subscribe</text>
 
-      <text x="375" y="148" class="label label-evt">event</text>
-      <text x="395" y="170" class="label label-sub">subscribe</text>
+      <text x="355" y="110" class="label label-evt">event</text>
+      <text x="370" y="128" class="label label-sub">subscribe</text>
 
-      <text x="375" y="210" class="label label-evt">event</text>
-      <text x="395" y="228" class="label label-sub">subscribe</text>
+      <text x="355" y="160" class="label label-evt">event</text>
+      <text x="370" y="178" class="label label-sub">subscribe</text>
 
-      <text x="380" y="262" class="label label-evt">event</text>
-      <text x="400" y="282" class="label label-sub">subscribe</text>
+      <text x="360" y="204" class="label label-evt">event</text>
+      <text x="375" y="222" class="label label-sub">subscribe</text>
 
       <!-- ============ ARROWHEADS ============ -->
 
-      <!-- Event arrows (pointing right → agent) -->
-      <polygon points="568,154 558,149 558,159" class="arrow-evt" />
-      <polygon points="568,174 558,169 558,179" class="arrow-evt" />
-      <polygon points="568,194 558,189 558,199" class="arrow-evt" />
-      <polygon points="568,214 558,209 558,219" class="arrow-evt" />
+      <!-- Event arrows (→ agent) -->
+      <polygon points="543,109 533,104 533,114" class="arrow-evt" />
+      <polygon points="543,129 533,124 533,134" class="arrow-evt" />
+      <polygon points="543,151 533,146 533,156" class="arrow-evt" />
+      <polygon points="543,171 533,166 533,176" class="arrow-evt" />
 
-      <!-- Subscribe arrows (pointing left → server) -->
-      <polygon points="212,58 222,53 222,63" class="arrow-sub" />
-      <polygon points="212,148 222,143 222,153" class="arrow-sub" />
-      <polygon points="212,238 222,233 222,243" class="arrow-sub" />
-      <polygon points="212,328 222,323 222,333" class="arrow-sub" />
+      <!-- Subscribe arrows (→ server) -->
+      <polygon points="192,42 202,37 202,47" class="arrow-sub" />
+      <polygon points="192,112 202,107 202,117" class="arrow-sub" />
+      <polygon points="192,182 202,177 202,187" class="arrow-sub" />
+      <polygon points="192,252 202,247 202,257" class="arrow-sub" />
 
       <!-- ============ ANIMATED DOTS ============ -->
 
@@ -148,14 +148,14 @@
 
       <!-- ============ MOTION PATHS ============ -->
       <defs>
-        <path id="evt-1" d="M210 42 L570 155" />
-        <path id="evt-2" d="M210 135 L570 175" />
-        <path id="evt-3" d="M210 225 L570 195" />
-        <path id="evt-4" d="M210 315 L570 215" />
-        <path id="sub-1" d="M570 165 L210 58" />
-        <path id="sub-2" d="M570 185 L210 148" />
-        <path id="sub-3" d="M570 205 L210 238" />
-        <path id="sub-4" d="M570 225 L210 328" />
+        <path id="evt-1" d="M190 30 L545 110" />
+        <path id="evt-2" d="M190 100 L545 130" />
+        <path id="evt-3" d="M190 170 L545 152" />
+        <path id="evt-4" d="M190 240 L545 172" />
+        <path id="sub-1" d="M545 120 L190 42" />
+        <path id="sub-2" d="M545 140 L190 112" />
+        <path id="sub-3" d="M545 162 L190 182" />
+        <path id="sub-4" d="M545 182 L190 252" />
       </defs>
 
     </svg>
@@ -164,8 +164,8 @@
 
 <style scoped>
 .hero-animation {
-  max-width: 740px;
-  margin: 0 auto 2rem;
+  max-width: 800px;
+  margin: 1rem auto 2.5rem;
   padding: 0 1rem;
 }
 
@@ -190,12 +190,12 @@ svg {
 }
 
 .agent-hint {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   fill: var(--vp-c-text-3);
   text-anchor: middle;
   font-family: var(--vp-font-family-base);
-  opacity: 0.5;
+  opacity: 0.45;
 }
 
 .sparkle {
@@ -237,19 +237,19 @@ svg {
 .evt-line {
   stroke: var(--vp-c-brand-1);
   stroke-width: 1.5;
-  opacity: 0.35;
+  opacity: 0.3;
 }
 
 .sub-line {
   stroke: var(--vp-c-brand-2);
   stroke-width: 1;
   stroke-dasharray: 6 4;
-  opacity: 0.3;
+  opacity: 0.25;
 }
 
 /* Arrows */
-.arrow-evt { fill: var(--vp-c-brand-1); opacity: 0.5; }
-.arrow-sub { fill: var(--vp-c-brand-2); opacity: 0.4; }
+.arrow-evt { fill: var(--vp-c-brand-1); opacity: 0.45; }
+.arrow-sub { fill: var(--vp-c-brand-2); opacity: 0.35; }
 
 /* Animated dots */
 .evt-dot { opacity: 0.9; }
@@ -279,13 +279,13 @@ svg {
 
 .label-sub {
   fill: var(--vp-c-brand-2);
-  opacity: 0.45;
+  opacity: 0.4;
 }
 
 /* Mobile */
 @media (max-width: 640px) {
   .hero-animation {
-    margin: 0 auto 1rem;
+    margin: 0.5rem auto 1.5rem;
   }
   .server-name { font-size: 13px; }
   .server-tag { font-size: 7px; }
