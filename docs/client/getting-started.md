@@ -62,7 +62,7 @@ if (client.supportsEvents()) {
 
   // Safe to subscribe
   const sub = await client.subscribe({
-    filter: { sources: ['github'] },
+    filter: { eventTypes: ['github.*'] },
     delivery: { channels: ['realtime'] },
   });
 } else {
@@ -78,7 +78,6 @@ The `supportsEvents()` method checks the server's capabilities returned during t
 ```typescript
 const subscription = await client.subscribe({
   filter: {
-    sources: ['github'],
     eventTypes: ['github.push', 'github.pull_request.*'],
     priority: ['normal', 'high', 'critical'],
   },
@@ -152,7 +151,7 @@ await client.resume(subscription.id);
 
 // Update a subscription
 await client.update(subscription.id, {
-  filter: { sources: ['github'], eventTypes: ['github.push'] },
+  filter: { eventTypes: ['github.push'] },
 });
 
 // Unsubscribe
@@ -198,7 +197,6 @@ async function main() {
   // Subscribe to GitHub events
   const sub = await client.subscribe({
     filter: {
-      sources: ['github'],
       eventTypes: ['github.*'],
     },
     delivery: {

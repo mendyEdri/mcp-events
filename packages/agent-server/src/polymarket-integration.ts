@@ -9,7 +9,6 @@ const POLYMARKET_SERVER_URL = 'https://polymarket-mcpe-server.fly.dev';
 interface PolymarketEvent {
   id: string;
   type: string;
-  source: 'polymarket';
   timestamp: string;
   data: {
     market: {

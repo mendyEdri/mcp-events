@@ -16,7 +16,7 @@ Realtime is the default and simplest delivery mode. Each matching event is sent 
 
 ```typescript
 const sub = await client.subscribe({
-  filter: { sources: ['github'] },
+  filter: { eventTypes: ['github.*'] },
   delivery: {
     channels: ['realtime'],
   },
@@ -45,7 +45,6 @@ const sub = await client.subscribe({
         "type": "github.push",
         "data": { "repository": "owner/repo" },
         "metadata": {
-          "source": "github",
           "timestamp": "2025-01-15T10:30:00Z",
           "priority": "normal"
         }
@@ -63,7 +62,7 @@ Cron delivery aggregates events over a time interval and delivers them as a batc
 
 ```typescript
 const sub = await client.subscribe({
-  filter: { sources: ['github'] },
+  filter: { eventTypes: ['github.*'] },
   delivery: {
     channels: ['cron'],
     cronSchedule: {
@@ -156,7 +155,7 @@ interface CronSchedule {
 
 ```typescript
 await client.subscribe({
-  filter: { sources: ['github'], eventTypes: ['github.*'] },
+  filter: { eventTypes: ['github.*'] },
   delivery: {
     channels: ['cron'],
     cronSchedule: {
@@ -172,7 +171,7 @@ await client.subscribe({
 
 ```typescript
 await client.subscribe({
-  filter: { sources: ['gmail'] },
+  filter: { eventTypes: ['gmail.*'] },
   delivery: {
     channels: ['cron'],
     cronSchedule: {
@@ -188,7 +187,7 @@ await client.subscribe({
 
 ```typescript
 await client.subscribe({
-  filter: { sources: ['github'], eventTypes: ['github.*'] },
+  filter: { eventTypes: ['github.*'] },
   delivery: {
     channels: ['cron'],
     cronSchedule: {
@@ -206,7 +205,7 @@ Scheduled delivery sends events at a specific one-time date and time. After deli
 
 ```typescript
 const sub = await client.subscribe({
-  filter: { sources: ['slack'] },
+  filter: { eventTypes: ['slack.*'] },
   delivery: {
     channels: ['scheduled'],
     scheduledDelivery: {
@@ -249,7 +248,7 @@ interface ScheduledDelivery {
 const fourHoursLater = new Date(Date.now() + 4 * 60 * 60 * 1000).toISOString();
 
 await client.subscribe({
-  filter: { sources: ['slack'] },
+  filter: { eventTypes: ['slack.*'] },
   delivery: {
     channels: ['scheduled'],
     scheduledDelivery: {

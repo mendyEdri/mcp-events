@@ -33,7 +33,6 @@ export type SubscriptionConfig = z.infer<typeof SubscriptionConfigSchema>;
  *       "name": "github-ci-failures",
  *       "description": "Alert on CI failures",
  *       "filter": {
- *         "sources": ["github"],
  *         "eventTypes": ["github.workflow_run.failed"]
  *       },
  *       "handler": {
@@ -46,7 +45,6 @@ export type SubscriptionConfig = z.infer<typeof SubscriptionConfigSchema>;
  *       "name": "slack-mentions",
  *       "description": "Have AI summarize Slack mentions",
  *       "filter": {
- *         "sources": ["slack"],
  *         "eventTypes": ["slack.message.mention"]
  *       },
  *       "handler": {

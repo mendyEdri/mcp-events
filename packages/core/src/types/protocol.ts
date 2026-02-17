@@ -97,7 +97,6 @@ export const MCPECapabilitiesSchema = z.object({
 
   // Filter capabilities
   filters: z.object({
-    supportedSources: z.array(z.string()).describe('Available event sources (e.g., github, slack)'),
     supportsWildcardTypes: z.boolean().describe('Whether event type wildcards (e.g., github.*) are supported'),
     supportsTagFiltering: z.boolean().describe('Whether filtering by tags is supported'),
     supportsPriorityFiltering: z.boolean().describe('Whether filtering by priority is supported'),
@@ -183,11 +182,6 @@ export const MCPEOperationDefinitions: MCPEOperation[] = [
           type: 'object',
           description: 'Criteria for which events to receive',
           properties: {
-            sources: {
-              type: 'array',
-              items: { type: 'string', enum: ['github', 'gmail', 'slack', 'custom'] },
-              description: 'Event sources to subscribe to',
-            },
             eventTypes: {
               type: 'array',
               items: { type: 'string' },
@@ -297,7 +291,7 @@ export const MCPEOperationDefinitions: MCPEOperation[] = [
       {
         description: 'Subscribe to all GitHub push events',
         input: {
-          filter: { sources: ['github'], eventTypes: ['github.push'] },
+          filter: { eventTypes: ['github.push'] },
           delivery: { channels: ['websocket'], priority: 'realtime' },
         },
         output: {
@@ -309,7 +303,7 @@ export const MCPEOperationDefinitions: MCPEOperation[] = [
       {
         description: 'Subscribe to high-priority Slack messages with batching',
         input: {
-          filter: { sources: ['slack'], priority: ['high', 'critical'] },
+          filter: { eventTypes: ['slack.*'], priority: ['high', 'critical'] },
           delivery: { channels: ['websocket'], priority: 'batch', batchInterval: 60000 },
         },
         output: {
@@ -321,7 +315,7 @@ export const MCPEOperationDefinitions: MCPEOperation[] = [
       {
         description: 'Daily digest of GitHub events at 9am',
         input: {
-          filter: { sources: ['github'] },
+          filter: { eventTypes: ['github.*'] },
           delivery: {
             channels: ['cron'],
             cronSchedule: {
@@ -340,7 +334,7 @@ export const MCPEOperationDefinitions: MCPEOperation[] = [
       {
         description: 'Hourly email summary',
         input: {
-          filter: { sources: ['gmail'] },
+          filter: { eventTypes: ['gmail.*'] },
           delivery: {
             channels: ['cron'],
             cronSchedule: {
@@ -359,7 +353,7 @@ export const MCPEOperationDefinitions: MCPEOperation[] = [
       {
         description: 'Remind me about Slack messages in 4 hours',
         input: {
-          filter: { sources: ['slack'] },
+          filter: { eventTypes: ['slack.*'] },
           delivery: {
             channels: ['scheduled'],
             scheduledDelivery: {
@@ -379,7 +373,7 @@ export const MCPEOperationDefinitions: MCPEOperation[] = [
       {
         description: 'Weekly GitHub report on Monday mornings',
         input: {
-          filter: { sources: ['github'], eventTypes: ['github.*'] },
+          filter: { eventTypes: ['github.*'] },
           delivery: {
             channels: ['cron'],
             cronSchedule: {
@@ -584,7 +578,6 @@ export const defaultMCPECapabilities: MCPECapabilities = {
     supportsBatching: true,
   },
   filters: {
-    supportedSources: ['github', 'gmail', 'slack', 'custom'],
     supportsWildcardTypes: true,
     supportsTagFiltering: true,
     supportsPriorityFiltering: true,

@@ -18,7 +18,6 @@ const event = createEvent('github.push', {
   branch: 'main',
   commits: 3,
 }, {
-  source: 'github',
   priority: 'normal',
   tags: ['ci'],
 });
@@ -34,7 +33,6 @@ server.publish('github.push', {
   branch: 'main',
   commits: 3,
 }, {
-  source: 'github',
   priority: 'normal',
   tags: ['ci'],
 });
@@ -78,7 +76,6 @@ const event = createEvent(
     user: 'bot',
   },
   {                                   // metadata
-    source: 'slack',
     priority: 'normal',
     tags: ['notifications'],
     sourceEventId: 'slack-msg-12345', // optional: original event ID
@@ -96,7 +93,6 @@ The function:
 
 ```typescript
 const event = createEvent('custom.backfill', { data: 'historical' }, {
-  source: 'custom',
   priority: 'low',
   timestamp: '2025-01-01T00:00:00Z',  // override automatic timestamp
 });
@@ -106,11 +102,10 @@ const event = createEvent('custom.backfill', { data: 'historical' }, {
 
 When an event is published, the server's subscription manager runs `matchesFilter()` against every active subscription. The matching rules are:
 
-1. **sources**: Event source must be in the filter's source list
-2. **eventTypes**: Event type must match at least one pattern (exact or wildcard)
-3. **tags**: Event must have at least one tag in the filter's tag list
-4. **priority**: Event priority must be in the filter's priority list
-5. **Omitted fields**: No constraint (always matches)
+1. **eventTypes**: Event type must match at least one pattern (exact or wildcard)
+2. **tags**: Event must have at least one tag in the filter's tag list
+3. **priority**: Event priority must be in the filter's priority list
+4. **Omitted fields**: No constraint (always matches)
 
 All specified fields must match (AND logic). Within each field, values are combined with OR logic.
 
@@ -119,16 +114,14 @@ All specified fields must match (AND logic). Within each field, values are combi
 ```typescript
 // Subscription filter
 const filter = {
-  sources: ['github'],
   eventTypes: ['github.push', 'github.pull_request.*'],
   priority: ['high', 'critical'],
 };
 
-// This event MATCHES (source=github, type matches wildcard, priority=high)
+// This event MATCHES (type matches wildcard, priority=high)
 server.publish('github.pull_request.opened', {
   repo: 'test',
 }, {
-  source: 'github',
   priority: 'high',
 });
 
@@ -136,7 +129,6 @@ server.publish('github.pull_request.opened', {
 server.publish('github.push', {
   repo: 'test',
 }, {
-  source: 'github',
   priority: 'normal',
 });
 ```
@@ -156,7 +148,6 @@ After matching, events are delivered based on the subscription's delivery channe
 ```typescript
 // Server publishes
 server.publish('github.push', { repo: 'test' }, {
-  source: 'github',
   priority: 'normal',
 });
 
@@ -194,7 +185,6 @@ app.post('/webhook/github', express.json(), (req, res) => {
   const payload = req.body;
 
   server.publish(`github.${githubEvent}`, payload, {
-    source: 'github',
     priority: 'normal',
     sourceEventId: req.headers['x-github-delivery'],
     tags: [payload.repository?.full_name].filter(Boolean),

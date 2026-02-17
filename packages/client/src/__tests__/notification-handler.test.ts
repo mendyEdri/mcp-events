@@ -10,7 +10,6 @@ describe('NotificationHandler', () => {
     type,
     data: {},
     metadata: {
-      source: 'github',
       timestamp: new Date().toISOString(),
       priority: 'normal',
     },

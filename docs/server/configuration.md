@@ -24,7 +24,6 @@ Controls event subscription behavior:
 ```typescript
 interface EventsServerOptions {
   maxSubscriptions?: number;             // Default: 100
-  supportedSources?: string[];           // Default: all sources
   deliveryChannels?: string[];           // Default: all channels
   features?: Partial<EventsFeatures>;    // Feature toggles
 }
@@ -60,22 +59,6 @@ const server = new EventsServer({
 ```
 
 **Default:** 100
-
-### supportedSources
-
-An array of event source identifiers this server supports. This is advertised to clients during capability negotiation so they know what they can subscribe to.
-
-```typescript
-const server = new EventsServer({
-  name: 'my-server',
-  version: '1.0.0',
-  events: {
-    supportedSources: ['github', 'gmail', 'slack', 'custom'],
-  },
-});
-```
-
-**Default:** All built-in sources (`github`, `gmail`, `slack`, `custom`)
 
 ### deliveryChannels
 
@@ -167,7 +150,6 @@ const server = new EventsServer({
   version: '2.1.0',
   events: {
     maxSubscriptions: 200,
-    supportedSources: ['github', 'gmail', 'slack', 'custom'],
     deliveryChannels: ['realtime', 'cron', 'scheduled'],
     features: {
       pause: true,
@@ -193,7 +175,6 @@ const server = new EventsServer({
 This gives you:
 
 - 100 max subscriptions
-- All sources supported
 - All delivery channels enabled
 - All features enabled
 

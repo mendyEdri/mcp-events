@@ -28,7 +28,6 @@ interface MCPEvent {
     "pusher": "developer"
   },
   "metadata": {
-    "source": "github",
     "sourceEventId": "gh-evt-12345",
     "timestamp": "2025-01-15T10:30:00Z",
     "priority": "normal",
@@ -43,24 +42,12 @@ The `EventMetadata` object provides structured context about each event:
 
 ```typescript
 interface EventMetadata {
-  source: EventSource;         // Origin system
   sourceEventId?: string;      // Original event ID from the source
   timestamp: string;           // ISO 8601 datetime
   priority: EventPriority;     // Priority level
   tags?: string[];             // Arbitrary tags for filtering
 }
 ```
-
-### Source
-
-The `source` field identifies which system produced the event:
-
-| Source | Description |
-|---|---|
-| `github` | GitHub events (pushes, PRs, issues, etc.) |
-| `gmail` | Gmail events (new messages, label changes) |
-| `slack` | Slack events (messages, reactions, mentions) |
-| `custom` | Any custom event source |
 
 ### Priority
 
@@ -113,24 +100,23 @@ The `EventFilter` type defines criteria for matching events:
 
 ```typescript
 interface EventFilter {
-  sources?: EventSource[];       // Match events from these sources
   eventTypes?: string[];         // Match these event types (wildcards supported)
   tags?: string[];               // Match events with any of these tags
   priority?: EventPriority[];    // Match events with these priorities
 }
 ```
 
-All filter fields are optional. An empty filter matches all events. When multiple fields are specified, they are combined with AND logic: every specified field must match. Within a field (e.g., multiple sources), the match is OR: the event must match at least one value.
+All filter fields are optional. An empty filter matches all events. When multiple fields are specified, they are combined with AND logic: every specified field must match. Within a field (e.g., multiple event types), the match is OR: the event must match at least one value.
 
 ### Filter Examples
 
 Match all GitHub events:
 
 ```typescript
-{ sources: ['github'] }
+{ eventTypes: ['github.*'] }
 ```
 
-Match high-priority events from any source:
+Match high-priority events:
 
 ```typescript
 { priority: ['high', 'critical'] }
@@ -140,7 +126,6 @@ Match GitHub push events tagged with "ci":
 
 ```typescript
 {
-  sources: ['github'],
   eventTypes: ['github.push'],
   tags: ['ci']
 }
@@ -161,7 +146,6 @@ const event = createEvent(
     commits: 3,
   },
   {
-    source: 'github',
     priority: 'normal',
     tags: ['ci'],
   }
@@ -182,13 +166,11 @@ The `matchesFilter` function checks if an event matches a filter:
 import { matchesFilter } from '@mcpe/core';
 
 const event = createEvent('github.push', { repo: 'test' }, {
-  source: 'github',
   priority: 'normal',
   tags: ['ci'],
 });
 
 const filter = {
-  sources: ['github'],
   eventTypes: ['github.*'],
   priority: ['normal', 'high'],
 };
@@ -198,11 +180,10 @@ matchesFilter(event, filter); // true
 
 ### Matching Rules
 
-1. **sources**: Event's `metadata.source` must be in the list
-2. **eventTypes**: Event's `type` must match at least one pattern (exact or wildcard)
-3. **tags**: Event must have at least one tag in the list
-4. **priority**: Event's `metadata.priority` must be in the list
-5. **Omitted fields**: Always match (no constraint)
+1. **eventTypes**: Event's `type` must match at least one pattern (exact or wildcard)
+2. **tags**: Event must have at least one tag in the list
+3. **priority**: Event's `metadata.priority` must be in the list
+4. **Omitted fields**: Always match (no constraint)
 
 ## Event Flow
 

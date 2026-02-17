@@ -25,7 +25,6 @@ Agents create subscriptions by calling the `events_subscribe` tool:
 ```typescript
 const subscription = await client.subscribe({
   filter: {
-    sources: ['github'],
     eventTypes: ['github.push', 'github.pull_request.*'],
     priority: ['normal', 'high', 'critical'],
   },
@@ -125,7 +124,6 @@ Modify a subscription's filter, delivery preferences, or expiration without crea
 ```typescript
 await client.update(subscription.id, {
   filter: {
-    sources: ['github'],
     eventTypes: ['github.push'],  // narrowed from wildcard
   },
   expiresAt: '2025-03-01T00:00:00Z',
@@ -151,7 +149,7 @@ Subscriptions can have an optional `expiresAt` timestamp. When the expiration ti
 ```typescript
 // Subscribe with expiration
 const sub = await client.subscribe({
-  filter: { sources: ['github'] },
+  filter: { eventTypes: ['github.*'] },
   delivery: { channels: ['realtime'] },
   expiresAt: '2025-01-16T00:00:00Z',
 });
@@ -184,7 +182,7 @@ Subscriptions can optionally include an event handler that processes events serv
 
 ```typescript
 const sub = await client.subscribe({
-  filter: { sources: ['github'] },
+  filter: { eventTypes: ['github.*'] },
   delivery: { channels: ['realtime'] },
   handler: {
     type: 'webhook',

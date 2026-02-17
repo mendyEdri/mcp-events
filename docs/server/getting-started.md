@@ -53,7 +53,6 @@ mcpServer.tool('greet', { name: 'string' }, async ({ name }) => ({
 // Wrap with EventsServer to add event support
 const eventsServer = new EventsServer(mcpServer, {
   maxSubscriptions: 50,
-  supportedSources: ['github', 'custom'],
 });
 
 const transport = new StdioServerTransport();
@@ -72,7 +71,6 @@ const server = new EventsServer({
   version: '2.0.0',
   events: {
     maxSubscriptions: 200,
-    supportedSources: ['github', 'gmail', 'slack', 'custom'],
     deliveryChannels: ['realtime', 'cron', 'scheduled'],
     features: {
       pause: true,
@@ -98,7 +96,6 @@ const event = createEvent('github.push', {
   repository: 'owner/repo',
   branch: 'main',
 }, {
-  source: 'github',
   priority: 'normal',
 });
 server.publish(event);
@@ -108,7 +105,6 @@ server.publish('github.push', {
   repository: 'owner/repo',
   branch: 'main',
 }, {
-  source: 'github',
   priority: 'normal',
 });
 ```
@@ -173,7 +169,6 @@ const server = new EventsServer({
   name: 'github-events',
   version: '1.0.0',
   events: {
-    supportedSources: ['github'],
     maxSubscriptions: 100,
   },
 });
@@ -191,7 +186,6 @@ const eventTypes = [
 setInterval(() => {
   const random = eventTypes[Math.floor(Math.random() * eventTypes.length)];
   server.publish(random.type, random.data, {
-    source: 'github',
     priority: 'normal',
   });
 }, 5000);

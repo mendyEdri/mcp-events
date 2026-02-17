@@ -5,7 +5,7 @@ import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
 import { z } from 'zod';
 import { jsonSchema } from 'ai';
 import { getMCPEInstance, type SubscriptionInfo } from './mcpe-integration.js';
-import type { EventFilter, EventSource, ScheduledTaskResult } from '@mcpe/core';
+import type { EventFilter, ScheduledTaskResult } from '@mcpe/core';
 import { getSubscriptionsJSON, formatSubscriptionsForDisplay, setSubscriptionEnabled, addSubscription, deleteSubscription, stopAllSchedulers } from './mcpe-config.js';
 import { listMCPServers } from './mcp-config.js';
 import { getAllIntegrationStatuses, getExampleById } from './examples.js';
@@ -124,7 +124,7 @@ mcpe.registerAgentExecutor(async (task, config) => {
 
 const SYSTEM_PROMPT = `You are an intelligent assistant for the MCPE (MCP Events) demo server.
 
-IMPORTANT: This is a demo/prototype server. Supported event sources: GitHub (webhooks) and Google Workspace (Pub/Sub).
+IMPORTANT: This is a demo/prototype server. Supported integrations: GitHub (webhooks) and Google Workspace (Pub/Sub).
 
 YOUR KEY CAPABILITY - CREATING SMART SUBSCRIPTIONS:
 You can create subscriptions where an AI agent automatically processes incoming events. When users say things like:
@@ -305,8 +305,6 @@ export async function runAgent(request: AgentRequest): Promise<AgentResponse> {
         subscribe: tool({
           description: 'Subscribe to events with real-time delivery (immediate notifications)',
           parameters: z.object({
-            sources: z.array(z.enum(['github', 'gmail', 'slack', 'custom'])).optional()
-              .describe('Event sources to subscribe to'),
             eventTypes: z.array(z.string()).optional()
               .describe('Specific event types or patterns (e.g., "github.push", "github.pull_request.*")'),
             tags: z.array(z.string()).optional()
@@ -314,7 +312,7 @@ export async function runAgent(request: AgentRequest): Promise<AgentResponse> {
             priority: z.array(z.enum(['low', 'normal', 'high', 'critical'])).optional()
               .describe('Priority levels to filter by'),
           }),
-          execute: async ({ sources, eventTypes, tags, priority }) => {
+          execute: async ({ eventTypes, tags, priority }) => {
             if (!mcpeUrl) {
               return { error: 'No MCPE EventHub URL configured. Please set MCPE_URL environment variable or provide mcpeUrl in the request.' };
             }
@@ -323,7 +321,6 @@ export async function runAgent(request: AgentRequest): Promise<AgentResponse> {
             }
 
             const filter: EventFilter = {};
-            if (sources) filter.sources = sources as EventSource[];
             if (eventTypes) filter.eventTypes = eventTypes;
             if (tags) filter.tags = tags;
             if (priority) filter.priority = priority;
@@ -345,8 +342,6 @@ export async function runAgent(request: AgentRequest): Promise<AgentResponse> {
         subscribeCron: tool({
           description: 'Subscribe to events with recurring scheduled delivery (daily digest, weekly report, hourly summary, etc.)',
           parameters: z.object({
-            sources: z.array(z.enum(['github', 'gmail', 'slack', 'custom'])).optional()
-              .describe('Event sources to subscribe to'),
             eventTypes: z.array(z.string()).optional()
               .describe('Specific event types or patterns'),
             tags: z.array(z.string()).optional()
@@ -360,7 +355,7 @@ export async function runAgent(request: AgentRequest): Promise<AgentResponse> {
             maxEventsPerDelivery: z.number().default(100).optional()
               .describe('Maximum events per delivery batch'),
           }),
-          execute: async ({ sources, eventTypes, tags, priority, cronExpression, timezone, maxEventsPerDelivery }) => {
+          execute: async ({ eventTypes, tags, priority, cronExpression, timezone, maxEventsPerDelivery }) => {
             if (!mcpeUrl) {
               return { error: 'No MCPE EventHub URL configured. Please set MCPE_URL environment variable or provide mcpeUrl in the request.' };
             }
@@ -369,7 +364,6 @@ export async function runAgent(request: AgentRequest): Promise<AgentResponse> {
             }
 
             const filter: EventFilter = {};
-            if (sources) filter.sources = sources as EventSource[];
             if (eventTypes) filter.eventTypes = eventTypes;
             if (tags) filter.tags = tags;
             if (priority) filter.priority = priority;
@@ -399,8 +393,6 @@ export async function runAgent(request: AgentRequest): Promise<AgentResponse> {
         subscribeScheduled: tool({
           description: 'Subscribe to events with one-time scheduled delivery (remind me in X hours, next Sunday, specific date)',
           parameters: z.object({
-            sources: z.array(z.enum(['github', 'gmail', 'slack', 'custom'])).optional()
-              .describe('Event sources to subscribe to'),
             eventTypes: z.array(z.string()).optional()
               .describe('Specific event types or patterns'),
             tags: z.array(z.string()).optional()
@@ -416,7 +408,7 @@ export async function runAgent(request: AgentRequest): Promise<AgentResponse> {
             autoExpire: z.boolean().default(true).optional()
               .describe('Automatically expire subscription after delivery'),
           }),
-          execute: async ({ sources, eventTypes, tags, priority, deliverAt, timezone, description, autoExpire }) => {
+          execute: async ({ eventTypes, tags, priority, deliverAt, timezone, description, autoExpire }) => {
             if (!mcpeUrl) {
               return { error: 'No MCPE EventHub URL configured. Please set MCPE_URL environment variable or provide mcpeUrl in the request.' };
             }
@@ -425,7 +417,6 @@ export async function runAgent(request: AgentRequest): Promise<AgentResponse> {
             }
 
             const filter: EventFilter = {};
-            if (sources) filter.sources = sources as EventSource[];
             if (eventTypes) filter.eventTypes = eventTypes;
             if (tags) filter.tags = tags;
             if (priority) filter.priority = priority;
@@ -811,9 +802,6 @@ export async function runAgent(request: AgentRequest): Promise<AgentResponse> {
 function formatFilter(filter: EventFilter): string {
   const parts: string[] = [];
 
-  if (filter.sources?.length) {
-    parts.push(`sources: [${filter.sources.join(', ')}]`);
-  }
   if (filter.eventTypes?.length) {
     parts.push(`types: [${filter.eventTypes.join(', ')}]`);
   }

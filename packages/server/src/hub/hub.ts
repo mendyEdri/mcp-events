@@ -42,7 +42,6 @@ export interface EventHubOptions {
   path?: string;
   serverInfo?: ServerInfo;
   maxSubscriptionsPerClient?: number;
-  supportedProviders?: string[];
   /** Enable APNS push notifications */
   apnsEnabled?: boolean;
   /** Enable WebPush notifications */
@@ -77,7 +76,6 @@ export class EventHub {
 
     this.serverCapabilities = {
       maxSubscriptions: options.maxSubscriptionsPerClient ?? 100,
-      supportedProviders: options.supportedProviders ?? ['github', 'gmail', 'slack', 'custom'],
     };
 
     // Build full MCPE capabilities
@@ -93,7 +91,6 @@ export class EventHub {
         supportsBatching: true,
       },
       filters: {
-        supportedSources: options.supportedProviders ?? ['github', 'gmail', 'slack', 'custom'],
         supportsWildcardTypes: true,
         supportsTagFiltering: true,
         supportsPriorityFiltering: true,

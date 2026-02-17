@@ -25,7 +25,6 @@ const server = new EventsServer({
   name: 'my-mcpe-server',
   version: '1.0.0',
   events: {
-    supportedSources: ['github', 'custom'],
     maxSubscriptions: 100,
   },
 });
@@ -39,7 +38,6 @@ console.log('MCPE server is running');
 // Publish an event every 5 seconds
 setInterval(() => {
   server.publish('custom.heartbeat', { status: 'ok' }, {
-    source: 'custom',
     priority: 'low',
   });
 }, 5000);
@@ -73,7 +71,6 @@ if (client.supportsEvents()) {
 // Subscribe to custom events
 const subscription = await client.subscribe({
   filter: {
-    sources: ['custom'],
     eventTypes: ['custom.*'],
   },
   delivery: {

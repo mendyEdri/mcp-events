@@ -22,7 +22,6 @@ const MAX_RECENT_EVENTS = 100;
 interface MCPEEvent {
   id: string;
   type: string;
-  source: 'polymarket';
   timestamp: string;
   data: {
     market: {
@@ -62,7 +61,6 @@ function toMCPEEvent(update: PriceUpdate): MCPEEvent {
   return {
     id: `poly-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     type: `polymarket.price.${direction}`,
-    source: 'polymarket',
     timestamp: update.timestamp.toISOString(),
     data: {
       market: {

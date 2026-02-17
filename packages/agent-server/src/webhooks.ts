@@ -169,7 +169,6 @@ function transformPullRequestPayload(payload: GitHubPullRequestPayload): MCPEven
       isMergeable: pr.mergeable,
     },
     {
-      source: 'github',
       priority: 'normal',
       tags: ['pull-request', payload.action, payload.repository.full_name],
     }
@@ -204,7 +203,6 @@ function transformPushPayload(payload: GitHubPushPayload): MCPEvent {
       pusher: payload.pusher,
     },
     {
-      source: 'github',
       priority: 'normal',
       tags: ['push', branch, payload.repository.full_name],
     }
@@ -226,34 +224,33 @@ export function transformGitHubPayload(eventType: string, payload: GitHubPayload
       return createEvent(
         `github.issue.${(payload as { action?: string }).action || 'unknown'}`,
         payload as Record<string, unknown>,
-        { source: 'github', priority: 'normal', tags: ['issue'] }
+        { priority: 'normal', tags: ['issue'] }
       );
 
     case 'issue_comment':
       return createEvent(
         `github.issue_comment.${(payload as { action?: string }).action || 'created'}`,
         payload as Record<string, unknown>,
-        { source: 'github', priority: 'normal', tags: ['comment'] }
+        { priority: 'normal', tags: ['comment'] }
       );
 
     case 'pull_request_review':
       return createEvent(
         `github.pull_request_review.${(payload as { action?: string }).action || 'submitted'}`,
         payload as Record<string, unknown>,
-        { source: 'github', priority: 'normal', tags: ['review'] }
+        { priority: 'normal', tags: ['review'] }
       );
 
     case 'pull_request_review_comment':
       return createEvent(
         `github.pull_request_review_comment.${(payload as { action?: string }).action || 'created'}`,
         payload as Record<string, unknown>,
-        { source: 'github', priority: 'normal', tags: ['review-comment'] }
+        { priority: 'normal', tags: ['review-comment'] }
       );
 
     default:
       // Generic transformation for unknown event types
       return createEvent(`github.${eventType}`, payload as Record<string, unknown>, {
-        source: 'github',
         priority: 'normal',
         tags: [eventType],
       });
@@ -328,7 +325,6 @@ export function processGenericWebhook(
     type.includes('.') ? type : `${source}.${type}`,
     body,
     {
-      source: source as 'github' | 'gmail' | 'slack' | 'custom',
       priority: 'normal',
       tags: [source],
     }
@@ -406,7 +402,6 @@ export function processGoogleWebhook(
           attributes: pubsubPayload.message.attributes,
         },
         {
-          source: 'gmail',
           priority: 'normal',
           tags: [service, 'push-notification'],
         }
@@ -433,7 +428,6 @@ export function processGoogleWebhook(
     eventType.includes('.') ? eventType : `${service}.${eventType}`,
     directBody,
     {
-      source: 'gmail',
       priority: 'normal',
       tags: [service],
     }

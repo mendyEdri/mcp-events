@@ -124,7 +124,6 @@ export function getEventsServer(): EventsServer {
       version: '1.0.0',
       events: {
         maxSubscriptions: 100,
-        supportedSources: ['github', 'gmail', 'slack', 'custom'],
       },
       handlers: {
         onAgentHandler: handleAgentEvent,
@@ -229,7 +228,7 @@ export function createSampleEvent(type: 'github' | 'slack' | 'gmail' | 'custom',
           ],
           pusher: 'demo-user',
         },
-        { source: 'github', priority: 'normal', tags: ['demo'] }
+        { priority: 'normal', tags: ['demo'] }
       );
 
     case 'slack':
@@ -241,7 +240,7 @@ export function createSampleEvent(type: 'github' | 'slack' | 'gmail' | 'custom',
           text: 'Hello from MCPE demo!',
           timestamp: now,
         },
-        { source: 'slack', priority: 'normal', tags: ['demo', 'message'] }
+        { priority: 'normal', tags: ['demo', 'message'] }
       );
 
     case 'gmail':
@@ -253,7 +252,7 @@ export function createSampleEvent(type: 'github' | 'slack' | 'gmail' | 'custom',
           subject: 'Demo Email from MCPE',
           snippet: 'This is a test email...',
         },
-        { source: 'gmail', priority: 'normal', tags: ['demo', 'inbox'] }
+        { priority: 'normal', tags: ['demo', 'inbox'] }
       );
 
     case 'custom':
@@ -264,7 +263,7 @@ export function createSampleEvent(type: 'github' | 'slack' | 'gmail' | 'custom',
           message: 'This is a custom demo event',
           timestamp: now,
         },
-        { source: 'custom', priority: 'normal', tags: ['demo'] }
+        { priority: 'normal', tags: ['demo'] }
       );
   }
 }
@@ -280,7 +279,7 @@ export function createAlertEvent(title: string, message: string, priority: 'high
       message,
       triggeredAt: new Date().toISOString(),
     },
-    { source: 'custom', priority, tags: ['alert', 'demo'] }
+    { priority, tags: ['alert', 'demo'] }
   );
 }
 
@@ -299,7 +298,7 @@ export function createErrorEvent(
       context,
       occurredAt: new Date().toISOString(),
     },
-    { source: 'custom', priority: 'high', tags: ['error', 'demo'] }
+    { priority: 'high', tags: ['error', 'demo'] }
   );
 }
 
@@ -317,7 +316,7 @@ export function createAnalyzeEvent(
       data,
       requestedAt: new Date().toISOString(),
     },
-    { source: 'custom', priority: 'normal', tags: ['analyze', 'demo'] }
+    { priority: 'normal', tags: ['analyze', 'demo'] }
   );
 }
 

@@ -103,7 +103,6 @@ import { getSubscriptionsJSON, getConfigPath, setSubscriptionEnabled, deleteSubs
 const RegisterRequestSchema = z.object({
   mcpeUrl: z.string().url().optional(),
   filter: z.object({
-    sources: z.array(z.enum(['github', 'gmail', 'slack', 'custom'])).optional(),
     eventTypes: z.array(z.string()).optional(),
     tags: z.array(z.string()).optional(),
     priority: z.array(z.enum(['low', 'normal', 'high', 'critical'])).optional(),
@@ -588,7 +587,7 @@ const HTML_CONTENT = `<!DOCTYPE html>
         return;
       }
       container.innerHTML = subs.map(sub => {
-        const filters = sub.filter.eventTypes ? sub.filter.eventTypes.join(', ') : (sub.filter.sources ? sub.filter.sources.join(', ') : 'all');
+        const filters = sub.filter.eventTypes ? sub.filter.eventTypes.join(', ') : 'all';
         const cronInfo = sub.delivery && sub.delivery.cronExpression ? '<div style="font-size: 11px; color: #888; margin-top: 4px;">Cron: ' + sub.delivery.cronExpression + '</div>' : '';
         return '<div class="mcp-item"><div class="mcp-header"><span class="mcp-name">' + sub.name + '</span><div style="display: flex; align-items: center; gap: 8px;"><button class="btn-delete" onclick="deleteSubscriptionItem(' + "'" + sub.name + "'" + ')" title="Delete subscription">×</button><label class="toggle"><input type="checkbox" ' + (sub.enabled ? 'checked' : '') + ' onchange="toggleSubscription(' + "'" + sub.name + "'" + ', this.checked)"><span class="toggle-slider"></span></label></div></div><div class="mcp-command" style="color: #e94560;">' + sub.handlerType + '</div><div style="font-size: 12px; color: #888; margin-top: 4px;">Filter: ' + filters + '</div>' + cronInfo + (sub.description ? '<div style="font-size: 11px; color: #666; margin-top: 8px; font-style: italic;">' + sub.description + '</div>' : '') + '</div>';
       }).join('');
@@ -1440,9 +1439,6 @@ export function createApp(): Hono {
         userMessage = request.prompt;
       } else if (request.filter) {
         const parts: string[] = ['Subscribe to events'];
-        if (request.filter.sources?.length) {
-          parts.push(`from ${request.filter.sources.join(', ')}`);
-        }
         if (request.filter.eventTypes?.length) {
           parts.push(`with types: ${request.filter.eventTypes.join(', ')}`);
         }
@@ -1610,7 +1606,7 @@ export function createApp(): Hono {
 
     // Generate subscriptions HTML
     const subscriptionsHtml = info.subscriptions.map(s => {
-      const name = s.filter.eventTypes ? s.filter.eventTypes.join(', ') : s.filter.sources?.join(', ') || 'All events';
+      const name = s.filter.eventTypes ? s.filter.eventTypes.join(', ') : 'All events';
       const agentConfig = s.handlerType === 'agent' && s.handlerConfig
         ? `<div class="sub-config"><strong>Agent Config:</strong><br>Model: ${s.handlerConfig.model || 'gpt-4o-mini'}<br>Prompt: "${s.handlerConfig.systemPrompt}"</div>`
         : '';
@@ -1745,7 +1741,7 @@ export function createApp(): Hono {
     },
     {
       "name": "slack-to-ntfy",
-      "filter": { "sources": ["slack"] },
+      "filter": { "eventTypes": ["slack.*"] },
       "handler": {
         "type": "webhook",
         "url": "https://ntfy.sh/my-topic"
@@ -1793,7 +1789,7 @@ export function createApp(): Hono {
       success: true,
       ...info,
       usage: {
-        publish: 'POST /publish with { type, source, data, priority? }',
+        publish: 'POST /publish with { type, data, priority? }',
         quickPublish: 'POST /publish/github, /publish/slack, /publish/alert, /publish/error, /publish/analyze',
         subscribe: `Open ${info.subscribeUrl} in browser or run: curl -s ${info.ntfyUrl}/json`,
       },
@@ -1804,9 +1800,8 @@ export function createApp(): Hono {
   app.post('/publish', async (c) => {
     try {
       const body = await c.req.json();
-      const { type, source, data, priority, tags } = body as {
+      const { type, data, priority, tags } = body as {
         type: string;
-        source?: 'github' | 'gmail' | 'slack' | 'custom';
         data?: Record<string, unknown>;
         priority?: 'low' | 'normal' | 'high' | 'critical';
         tags?: string[];
@@ -1820,7 +1815,6 @@ export function createApp(): Hono {
         type,
         data || {},
         {
-          source: source || 'custom',
           priority: priority || 'normal',
           tags,
         }
@@ -1833,7 +1827,6 @@ export function createApp(): Hono {
         event: {
           id: event.id,
           type: event.type,
-          source: event.metadata.source,
         },
         matchedSubscriptions: result.matchedSubscriptions,
       });

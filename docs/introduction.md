@@ -32,9 +32,10 @@ client.onEvent('github.issue.commented', async (event) => {
 
 ## Design Principles
 
-- **Agent-Centric** - Agents decide what to subscribe to, when to pause, and when to unsubscribe.
-- **Transport-Agnostic** - Works over WebSocket, SSE, or stdio - just like MCP.
-- **Schema-Driven** - LLM-friendly schemas enable agents to reason about subscriptions.
+- **LLM-Native** - The LLM itself is the subscriber. Subscription management is exposed as MCP tools that the LLM calls naturally — no developer configuration required.
+- **Self-Managing** - The LLM controls the full subscription lifecycle: subscribe, pause, resume, adjust filters, and unsubscribe as context evolves.
+- **Schema-Driven** - LLM-readable schemas let the model discover available events, reason about filters, and generate valid subscriptions autonomously.
+- **Transport-Agnostic** - Works over WebSocket, SSE, or stdio — just like MCP.
 - **Open Standards** - Built on JSON-RPC 2.0, following MCP conventions.
 
 ## Architecture

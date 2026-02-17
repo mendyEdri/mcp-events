@@ -16,7 +16,6 @@ const server = new EventsServer({
   version: '1.0.0',
   events: {
     maxSubscriptions: 100,
-    supportedSources: ['github', 'gmail', 'slack', 'custom'],
     deliveryChannels: ['realtime', 'cron', 'scheduled'],
     features: {
       pause: true,
@@ -54,7 +53,6 @@ import { EventsServer } from '@mcpe/core';
 const mcpServer = new McpServer({ name: 'my-server', version: '1.0.0' });
 const server = new EventsServer(mcpServer, {
   maxSubscriptions: 50,
-  supportedSources: ['github'],
 });
 ```
 
@@ -118,7 +116,6 @@ import { createEvent } from '@mcpe/core';
 const event = createEvent('github.push', {
   repository: 'owner/repo',
 }, {
-  source: 'github',
   priority: 'normal',
 });
 
@@ -142,7 +139,6 @@ server.publish('github.push', {
   repository: 'owner/repo',
   branch: 'main',
 }, {
-  source: 'github',
   priority: 'normal',
   tags: ['ci'],
 });
@@ -154,7 +150,7 @@ server.publish('github.push', {
 |---|---|---|
 | `type` | `string` | Event type (dot-notation) |
 | `data` | `Record<string, unknown>` | Event payload |
-| `metadata` | `Partial<EventMetadata>` | Event metadata (source, priority, tags) |
+| `metadata` | `Partial<EventMetadata>` | Event metadata (priority, tags) |
 
 **Returns:** `void`
 
@@ -251,7 +247,6 @@ Get the server's capability object, which reflects the current configuration.
 ```typescript
 const caps = server.capability;
 console.log(caps.subscriptions.maxActive);
-console.log(caps.filters.supportedSources);
 ```
 
 **Type:** `MCPECapabilities`
@@ -269,7 +264,6 @@ Create a new event subscription.
 ```typescript
 {
   filter: {
-    sources?: string[];
     eventTypes?: string[];
     tags?: string[];
     priority?: string[];

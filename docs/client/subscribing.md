@@ -9,7 +9,6 @@ The `subscribe` method creates a new event subscription:
 ```typescript
 const subscription = await client.subscribe({
   filter: {
-    sources: ['github'],
     eventTypes: ['github.push'],
     tags: ['production'],
     priority: ['high', 'critical'],
@@ -50,20 +49,6 @@ interface Subscription {
 ```
 
 ## Filter Options
-
-### By Source
-
-Filter events from specific external systems:
-
-```typescript
-// Single source
-{ sources: ['github'] }
-
-// Multiple sources
-{ sources: ['github', 'slack'] }
-```
-
-Available sources: `github`, `gmail`, `slack`, `custom`
 
 ### By Event Type
 
@@ -111,7 +96,6 @@ All filter fields are combined with AND logic. Within each field, values are OR:
 ```typescript
 // GitHub push events with high or critical priority, tagged 'production'
 {
-  sources: ['github'],
   eventTypes: ['github.push'],
   priority: ['high', 'critical'],
   tags: ['production'],
@@ -119,7 +103,6 @@ All filter fields are combined with AND logic. Within each field, values are OR:
 ```
 
 This matches events that are:
-- From GitHub AND
 - Of type `github.push` AND
 - Priority high OR critical AND
 - Tagged with `production`
@@ -220,7 +203,6 @@ Modify a subscription without unsubscribing and resubscribing:
 await client.update(subscription.id, {
   // Update the filter
   filter: {
-    sources: ['github'],
     eventTypes: ['github.push'],  // narrower than before
   },
 
@@ -306,7 +288,7 @@ client.clearHandlers();
 ```typescript
 try {
   const sub = await client.subscribe({
-    filter: { sources: ['github'] },
+    filter: { eventTypes: ['github.*'] },
     delivery: { channels: ['realtime'] },
   });
 } catch (error) {

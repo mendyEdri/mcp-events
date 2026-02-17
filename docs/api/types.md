@@ -23,18 +23,11 @@ Metadata attached to every event.
 
 ```typescript
 interface EventMetadata {
-  source: EventSource;                 // Origin system
   sourceEventId?: string;              // Original event ID from source
   timestamp: string;                   // ISO 8601 datetime
   priority: EventPriority;             // Priority level (default: 'normal')
   tags?: string[];                     // Freeform tags for filtering
 }
-```
-
-### EventSource
-
-```typescript
-type EventSource = 'github' | 'gmail' | 'slack' | 'custom';
 ```
 
 ### EventPriority
@@ -49,7 +42,6 @@ Criteria for matching events against subscriptions.
 
 ```typescript
 interface EventFilter {
-  sources?: EventSource[];             // Match events from these sources
   eventTypes?: string[];               // Match event types (wildcards supported)
   tags?: string[];                     // Match events with any of these tags
   priority?: EventPriority[];          // Match events with these priorities
@@ -228,7 +220,6 @@ interface EventsServerConfig {
 ```typescript
 interface EventsServerOptions {
   maxSubscriptions?: number;           // Default: 100
-  supportedSources?: string[];         // Default: all
   deliveryChannels?: string[];         // Default: all
   features?: Partial<EventsFeatures>;  // Feature toggles
 }
@@ -342,7 +333,7 @@ import { createEvent } from '@mcpe/core';
 const event = createEvent(
   'github.push',
   { repository: 'owner/repo' },
-  { source: 'github', priority: 'normal' }
+  { priority: 'normal' }
 );
 ```
 
@@ -364,7 +355,6 @@ Check if an event matches a filter.
 import { matchesFilter } from '@mcpe/core';
 
 const matches = matchesFilter(event, {
-  sources: ['github'],
   eventTypes: ['github.*'],
 });
 ```

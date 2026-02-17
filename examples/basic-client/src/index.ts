@@ -44,7 +44,6 @@ async function main() {
       console.log(`\n[Event Received]`);
       console.log(`  Type: ${event.type}`);
       console.log(`  ID: ${event.id}`);
-      console.log(`  Source: ${event.metadata.source}`);
       console.log(`  Data:`, JSON.stringify(event.data, null, 2));
       console.log(`  Subscription: ${subscriptionId}`);
     });
@@ -57,7 +56,6 @@ async function main() {
     console.log('Creating subscription for GitHub events...');
     const subscription = await client.subscribe({
       filter: {
-        sources: ['github'],
         eventTypes: ['github.*'],
       },
       delivery: {

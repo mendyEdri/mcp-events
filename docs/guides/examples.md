@@ -18,7 +18,6 @@ const server = new EventsServer({
   name: 'github-monitor',
   version: '1.0.0',
   events: {
-    supportedSources: ['github'],
     maxSubscriptions: 100,
   },
 });
@@ -37,7 +36,6 @@ app.post('/webhook/github', express.json(), (req, res) => {
     : `github.${eventType}`;
 
   server.publish(type, req.body, {
-    source: 'github',
     priority: determinePriority(eventType, req.body),
     sourceEventId: req.headers['x-github-delivery'],
     tags: [req.body.repository?.full_name].filter(Boolean),
@@ -76,7 +74,7 @@ await client.connect(transport);
 // Subscribe to high-priority GitHub events in realtime
 await client.subscribe({
   filter: {
-    sources: ['github'],
+    eventTypes: ['github.*'],
     priority: ['high', 'critical'],
   },
   delivery: { channels: ['realtime'] },
@@ -84,7 +82,7 @@ await client.subscribe({
 
 // Subscribe to all events as a daily digest
 await client.subscribeWithLocalCron(
-  { sources: ['github'] },
+  { eventTypes: ['github.*'] },
   { expression: '0 9 * * *', timezone: 'America/New_York' },
   async (events) => {
     console.log(`\n=== Daily GitHub Digest (${events.length} events) ===`);
@@ -137,14 +135,14 @@ await client.subscribe({
 
 client.onEvent('*', (event) => {
   if (event.metadata.priority === 'critical') {
-    console.error(`[ALERT] ${event.metadata.source}: ${event.type}`);
+    console.error(`[ALERT] ${event.type}`);
     console.error(`  Data: ${JSON.stringify(event.data)}`);
   }
 });
 
 // GitHub: hourly summary
 await client.subscribeWithLocalCron(
-  { sources: ['github'] },
+  { eventTypes: ['github.*'] },
   { expression: '@hourly' },
   async (events) => {
     if (events.length === 0) return;
@@ -155,7 +153,7 @@ await client.subscribeWithLocalCron(
 
 // Slack: every 30 minutes
 await client.subscribeWithLocalTimer(
-  { sources: ['slack'] },
+  { eventTypes: ['slack.*'] },
   { intervalMs: 30 * 60 * 1000 },
   async (events) => {
     if (events.length === 0) return;
@@ -165,7 +163,7 @@ await client.subscribeWithLocalTimer(
 
 // Gmail: daily digest at 8 AM
 await client.subscribeWithLocalCron(
-  { sources: ['gmail'] },
+  { eventTypes: ['gmail.*'] },
   { expression: '0 8 * * *', timezone: 'America/New_York' },
   async (events) => {
     if (events.length === 0) return;
@@ -214,7 +212,7 @@ await client.subscribe({
 
 // Forward all GitHub events to a Slack webhook
 await client.subscribe({
-  filter: { sources: ['github'] },
+  filter: { eventTypes: ['github.*'] },
   delivery: { channels: ['realtime'] },
   handler: {
     type: 'webhook',
@@ -228,7 +226,7 @@ await client.subscribe({
 
 // Forward events to a custom API with authentication
 await client.subscribe({
-  filter: { sources: ['custom'], tags: ['analytics'] },
+  filter: { eventTypes: ['custom.*'], tags: ['analytics'] },
   delivery: { channels: ['realtime'] },
   handler: {
     type: 'webhook',
@@ -266,7 +264,6 @@ await client.connect(transport);
 // Watch for deployment events
 await client.subscribe({
   filter: {
-    sources: ['github'],
     eventTypes: ['github.deployment', 'github.deployment_status'],
     tags: ['production'],
   },
@@ -276,7 +273,6 @@ await client.subscribe({
 // Watch for CI failures
 await client.subscribe({
   filter: {
-    sources: ['github'],
     eventTypes: ['github.check_run.*', 'github.check_suite.*'],
     priority: ['high', 'critical'],
   },
@@ -328,7 +324,6 @@ await client.connect(transport);
 // Subscribe with an agent handler for automatic triage
 await client.subscribe({
   filter: {
-    sources: ['github'],
     eventTypes: ['github.issues.opened'],
   },
   delivery: { channels: ['realtime'] },
@@ -378,7 +373,6 @@ await client.connect(transport);
 // Run tests when code is pushed
 await client.subscribe({
   filter: {
-    sources: ['github'],
     eventTypes: ['github.push'],
     tags: ['main-branch'],
   },
@@ -443,7 +437,6 @@ await client.connect(transport);
 // Remind about open PRs every day at 10 AM
 await client.subscribeWithLocalCron(
   {
-    sources: ['github'],
     eventTypes: ['github.pull_request.opened'],
   },
   { expression: '0 10 * * *', timezone: 'America/New_York' },
@@ -475,7 +468,7 @@ await client.scheduleDelayedTask(
 
 // Scheduled delivery: collect all events and deliver at end of day
 await client.subscribe({
-  filter: { sources: ['github', 'slack', 'gmail'] },
+  filter: { eventTypes: ['github.*', 'slack.*', 'gmail.*'] },
   delivery: {
     channels: ['scheduled'],
     scheduledDelivery: {
@@ -490,13 +483,13 @@ await client.subscribe({
 
 client.onBatch((events, subscriptionId) => {
   console.log(`\n=== End of Day Summary (${events.length} events) ===`);
-  const bySource = {};
+  const byType = {};
   events.forEach(e => {
-    const src = e.metadata.source;
-    bySource[src] = (bySource[src] || 0) + 1;
+    const prefix = e.type.split('.')[0];
+    byType[prefix] = (byType[prefix] || 0) + 1;
   });
-  Object.entries(bySource).forEach(([source, count]) => {
-    console.log(`  ${source}: ${count} events`);
+  Object.entries(byType).forEach(([type, count]) => {
+    console.log(`  ${type}: ${count} events`);
   });
 });
 
@@ -534,7 +527,6 @@ await client.connect(transport);
 // Create a subscription
 const sub = await client.subscribe({
   filter: {
-    sources: ['github'],
     eventTypes: ['github.*'],
   },
   delivery: { channels: ['realtime'] },
@@ -560,7 +552,6 @@ await client.resume(sub.id);
 console.log('Updating subscription...');
 const updated = await client.update(sub.id, {
   filter: {
-    sources: ['github'],
     eventTypes: ['github.push'],
     priority: ['high', 'critical'],
   },

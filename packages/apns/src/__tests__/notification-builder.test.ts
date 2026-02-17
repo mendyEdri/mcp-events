@@ -165,7 +165,6 @@ describe('NotificationBuilder', () => {
       type: 'github.push',
       data: { repository: 'test/repo', branch: 'main' },
       metadata: {
-        source: 'github',
         timestamp: new Date().toISOString(),
         priority: 'normal',
       },
@@ -178,7 +177,6 @@ describe('NotificationBuilder', () => {
       expect(notification.payload.esmcp).toEqual({
         eventId: event.id,
         eventType: event.type,
-        source: event.metadata.source,
       });
     });
 

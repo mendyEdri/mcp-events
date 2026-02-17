@@ -37,7 +37,6 @@ Create a new event subscription.
     "name": "events_subscribe",
     "arguments": {
       "filter": {
-        "sources": ["github"],
         "eventTypes": ["github.push", "github.pull_request.*"],
         "tags": ["production"],
         "priority": ["high", "critical"]
@@ -60,7 +59,7 @@ Create a new event subscription.
   "result": {
     "content": [{
       "type": "text",
-      "text": "{\"id\":\"550e8400-e29b-41d4-a716-446655440000\",\"clientId\":\"client-1\",\"filter\":{\"sources\":[\"github\"],\"eventTypes\":[\"github.push\",\"github.pull_request.*\"],\"tags\":[\"production\"],\"priority\":[\"high\",\"critical\"]},\"delivery\":{\"channels\":[\"realtime\"]},\"status\":\"active\",\"createdAt\":\"2025-01-15T10:30:00Z\",\"updatedAt\":\"2025-01-15T10:30:00Z\",\"expiresAt\":\"2025-02-01T00:00:00Z\"}"
+      "text": "{\"id\":\"550e8400-e29b-41d4-a716-446655440000\",\"clientId\":\"client-1\",\"filter\":{\"eventTypes\":[\"github.push\",\"github.pull_request.*\"],\"tags\":[\"production\"],\"priority\":[\"high\",\"critical\"]},\"delivery\":{\"channels\":[\"realtime\"]},\"status\":\"active\",\"createdAt\":\"2025-01-15T10:30:00Z\",\"updatedAt\":\"2025-01-15T10:30:00Z\",\"expiresAt\":\"2025-02-01T00:00:00Z\"}"
     }]
   }
 }
@@ -143,7 +142,7 @@ List subscriptions, optionally filtered by status.
   "result": {
     "content": [{
       "type": "text",
-      "text": "{\"subscriptions\":[{\"id\":\"550e8400-...\",\"clientId\":\"client-1\",\"filter\":{\"sources\":[\"github\"]},\"delivery\":{\"channels\":[\"realtime\"]},\"status\":\"active\",\"createdAt\":\"2025-01-15T10:30:00Z\",\"updatedAt\":\"2025-01-15T10:30:00Z\"}]}"
+      "text": "{\"subscriptions\":[{\"id\":\"550e8400-...\",\"clientId\":\"client-1\",\"filter\":{\"eventTypes\":[\"github.*\"]},\"delivery\":{\"channels\":[\"realtime\"]},\"status\":\"active\",\"createdAt\":\"2025-01-15T10:30:00Z\",\"updatedAt\":\"2025-01-15T10:30:00Z\"}]}"
     }]
   }
 }
@@ -248,7 +247,6 @@ Update a subscription's filter, delivery preferences, or expiration.
       "subscriptionId": "550e8400-e29b-41d4-a716-446655440000",
       "updates": {
         "filter": {
-          "sources": ["github"],
           "eventTypes": ["github.push"]
         },
         "delivery": {
@@ -274,7 +272,7 @@ Update a subscription's filter, delivery preferences, or expiration.
   "result": {
     "content": [{
       "type": "text",
-      "text": "{\"id\":\"550e8400-...\",\"clientId\":\"client-1\",\"filter\":{\"sources\":[\"github\"],\"eventTypes\":[\"github.push\"]},\"delivery\":{\"channels\":[\"cron\"],\"cronSchedule\":{\"expression\":\"@daily\",\"timezone\":\"UTC\"}},\"status\":\"active\",\"createdAt\":\"2025-01-15T10:30:00Z\",\"updatedAt\":\"2025-01-15T11:00:00Z\",\"expiresAt\":\"2025-06-01T00:00:00Z\"}"
+      "text": "{\"id\":\"550e8400-...\",\"clientId\":\"client-1\",\"filter\":{\"eventTypes\":[\"github.push\"]},\"delivery\":{\"channels\":[\"cron\"],\"cronSchedule\":{\"expression\":\"@daily\",\"timezone\":\"UTC\"}},\"status\":\"active\",\"createdAt\":\"2025-01-15T10:30:00Z\",\"updatedAt\":\"2025-01-15T11:00:00Z\",\"expiresAt\":\"2025-06-01T00:00:00Z\"}"
     }]
   }
 }
@@ -312,7 +310,6 @@ Deliver a single event to a subscriber.
           "commits": 3
         },
         "metadata": {
-          "source": "github",
           "timestamp": "2025-01-15T10:30:00Z",
           "priority": "normal",
           "tags": ["ci"]
@@ -343,7 +340,6 @@ Deliver a batch of events to a subscriber.
           "type": "github.push",
           "data": { "repository": "owner/repo", "branch": "main" },
           "metadata": {
-            "source": "github",
             "timestamp": "2025-01-15T09:00:00Z",
             "priority": "normal"
           }
@@ -353,7 +349,6 @@ Deliver a batch of events to a subscriber.
           "type": "github.issue",
           "data": { "repository": "owner/repo", "title": "Bug report" },
           "metadata": {
-            "source": "github",
             "timestamp": "2025-01-15T09:15:00Z",
             "priority": "high"
           }

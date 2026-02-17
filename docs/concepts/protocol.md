@@ -41,7 +41,6 @@ Client                              Server
 During initialization, the server advertises its MCPE capabilities including:
 
 - Maximum number of active subscriptions
-- Supported event sources
 - Supported delivery channels
 - Available features (pause, wildcards, cron, scheduled delivery)
 
@@ -114,7 +113,7 @@ Client                              Server
   "params": {
     "name": "events_subscribe",
     "arguments": {
-      "filter": { "sources": ["github"] },
+      "filter": { "eventTypes": ["github.*"] },
       "delivery": { "channels": ["realtime"] }
     }
   }
@@ -151,7 +150,6 @@ Client                              Server
         "type": "github.push",
         "data": { "repository": "owner/repo" },
         "metadata": {
-          "source": "github",
           "timestamp": "2025-01-15T10:30:00Z",
           "priority": "normal"
         }

@@ -96,7 +96,6 @@ Create a new event subscription.
 ```typescript
 const subscription = await client.subscribe({
   filter: {
-    sources: ['github'],
     eventTypes: ['github.*'],
     tags: ['production'],
     priority: ['high', 'critical'],
@@ -203,7 +202,6 @@ Update a subscription's filter, delivery, or expiration.
 ```typescript
 await client.update('550e8400-...', {
   filter: {
-    sources: ['github'],
     eventTypes: ['github.push'],
   },
   delivery: {
@@ -306,7 +304,7 @@ Create a subscription with a local cron-based handler.
 
 ```typescript
 const subId = await client.subscribeWithLocalCron(
-  { sources: ['github'] },
+  { eventTypes: ['github.*'] },
   { expression: '0 9 * * *', timezone: 'America/New_York' },
   async (events) => {
     console.log(`Daily: ${events.length} events`);
@@ -330,7 +328,7 @@ Create a subscription with a local interval-based handler.
 
 ```typescript
 const subId = await client.subscribeWithLocalTimer(
-  { sources: ['slack'] },
+  { eventTypes: ['slack.*'] },
   { intervalMs: 60000 },
   async (events) => {
     console.log(`Last minute: ${events.length} events`);

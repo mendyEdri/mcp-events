@@ -79,7 +79,7 @@ export interface SubscriptionStoreOptions {
  *   id: 'uuid',
  *   name: 'My Subscription',
  *   enabled: true,
- *   filter: { sources: ['github'] },
+ *   filter: { eventTypes: ['github.*'] },
  *   delivery: { channels: ['realtime'] },
  *   createdAt: new Date().toISOString(),
  * });

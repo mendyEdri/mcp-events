@@ -32,7 +32,7 @@ interface BashEventHandler {
 
 ```typescript
 const sub = await client.subscribe({
-  filter: { sources: ['github'], eventTypes: ['github.push'] },
+  filter: { eventTypes: ['github.push'] },
   delivery: { channels: ['realtime'] },
   handler: {
     type: 'bash',
@@ -68,7 +68,6 @@ print(f"Push to {event['data']['repository']}")
 Environment variables are prefixed with `EVENT_` and uppercased:
 - `EVENT_TYPE` -- the event type
 - `EVENT_ID` -- the event ID
-- `EVENT_SOURCE` -- the event source
 - `EVENT_PRIORITY` -- the event priority
 - Nested data fields are flattened: `event.data.repository` becomes `EVENT_REPOSITORY`
 
@@ -123,7 +122,7 @@ interface WebhookEventHandler {
 
 ```typescript
 const sub = await client.subscribe({
-  filter: { sources: ['github'] },
+  filter: { eventTypes: ['github.*'] },
   delivery: { channels: ['realtime'] },
   handler: {
     type: 'webhook',
@@ -152,7 +151,6 @@ Authorization: Bearer my-secret-token
   "type": "github.push",
   "data": { "repository": "owner/repo", "branch": "main" },
   "metadata": {
-    "source": "github",
     "timestamp": "2025-01-15T10:30:00Z",
     "priority": "normal"
   }
@@ -186,7 +184,6 @@ interface AgentEventHandler {
 ```typescript
 const sub = await client.subscribe({
   filter: {
-    sources: ['github'],
     eventTypes: ['github.issue.*'],
   },
   delivery: { channels: ['realtime'] },
@@ -273,7 +270,7 @@ You can use both server-side and client-side handling together:
 ```typescript
 // Server-side: webhook to Slack
 const sub = await client.subscribe({
-  filter: { sources: ['github'], priority: ['critical'] },
+  filter: { eventTypes: ['github.*'], priority: ['critical'] },
   delivery: { channels: ['realtime'] },
   handler: {
     type: 'webhook',

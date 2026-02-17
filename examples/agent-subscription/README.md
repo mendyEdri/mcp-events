@@ -7,8 +7,8 @@ that enables AI agents to subscribe to and receive events from external systems.
 
 ASP is inspired by the Model Context Protocol (MCP) and follows similar design principles:
 
-### 1. Agent-Centric Control
-Just as MCP lets agents decide which tools to call, ASP gives agents control over:
+### 1. LLM-Native Subscriptions
+Just as MCP lets LLMs decide which tools to call, ASP exposes subscriptions as tools the LLM calls naturally. The LLM itself decides:
 - **What** to subscribe to (filter criteria)
 - **When** to subscribe/unsubscribe
 - **How** to handle received events

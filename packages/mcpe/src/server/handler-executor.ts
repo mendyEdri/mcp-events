@@ -162,7 +162,6 @@ export class HandlerExecutor {
         ...handler.env,
         MCPE_EVENT_ID: event.id,
         MCPE_EVENT_TYPE: event.type,
-        MCPE_EVENT_SOURCE: event.metadata.source,
         MCPE_EVENT_PRIORITY: event.metadata.priority,
         MCPE_EVENT_TIMESTAMP: event.metadata.timestamp,
         MCPE_EVENT_DATA: JSON.stringify(event.data),

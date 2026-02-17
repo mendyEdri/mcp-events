@@ -1,21 +1,11 @@
 import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';
 
-export const EventSourceSchema = z.enum([
-  'github',
-  'gmail',
-  'slack',
-  'custom',
-]);
-
-export type EventSource = z.infer<typeof EventSourceSchema>;
-
 export const EventPrioritySchema = z.enum(['low', 'normal', 'high', 'critical']);
 
 export type EventPriority = z.infer<typeof EventPrioritySchema>;
 
 export const EventMetadataSchema = z.object({
-  source: EventSourceSchema,
   sourceEventId: z.string().optional(),
   timestamp: z.string().datetime(),
   priority: EventPrioritySchema.default('normal'),
@@ -34,7 +24,6 @@ export const ESMCPEventSchema = z.object({
 export type ESMCPEvent = z.infer<typeof ESMCPEventSchema>;
 
 export const EventFilterSchema = z.object({
-  sources: z.array(EventSourceSchema).optional(),
   eventTypes: z.array(z.string()).optional(),
   tags: z.array(z.string()).optional(),
   priority: z.array(EventPrioritySchema).optional(),
@@ -43,12 +32,6 @@ export const EventFilterSchema = z.object({
 export type EventFilter = z.infer<typeof EventFilterSchema>;
 
 export function matchesFilter(event: ESMCPEvent, filter: EventFilter): boolean {
-  if (filter.sources && filter.sources.length > 0) {
-    if (!filter.sources.includes(event.metadata.source)) {
-      return false;
-    }
-  }
-
   if (filter.eventTypes && filter.eventTypes.length > 0) {
     const matches = filter.eventTypes.some((pattern) => {
       if (pattern.endsWith('.*')) {

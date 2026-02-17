@@ -1,13 +1,11 @@
 // Event types
 export {
-  EventSourceSchema,
   EventPrioritySchema,
   EventMetadataSchema,
   MCPEventSchema,
   EventFilterSchema,
   matchesFilter,
   createEvent,
-  type EventSource,
   type EventPriority,
   type EventMetadata,
   type MCPEvent,

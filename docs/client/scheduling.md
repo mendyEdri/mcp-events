@@ -10,7 +10,6 @@ Create a subscription that triggers a local handler on a cron schedule:
 const subId = await client.subscribeWithLocalCron(
   // Event filter
   {
-    sources: ['github'],
     eventTypes: ['github.*'],
   },
   // Cron configuration
@@ -63,7 +62,7 @@ Create a subscription that triggers a handler at a fixed interval:
 const subId = await client.subscribeWithLocalTimer(
   // Event filter
   {
-    sources: ['slack'],
+    eventTypes: ['slack.*'],
   },
   // Timer configuration
   {
@@ -156,7 +155,7 @@ MCPE offers both client-side and server-side scheduling. Here is when to use eac
 ```typescript
 // Server handles the scheduling
 const sub = await client.subscribe({
-  filter: { sources: ['github'] },
+  filter: { eventTypes: ['github.*'] },
   delivery: {
     channels: ['cron'],
     cronSchedule: {
@@ -178,7 +177,7 @@ client.onBatch((events, subscriptionId) => {
 ```typescript
 // Client handles the scheduling locally
 await client.subscribeWithLocalCron(
-  { sources: ['github'] },
+  { eventTypes: ['github.*'] },
   { expression: '@daily', timezone: 'America/New_York' },
   async (events) => {
     // Full control over processing
@@ -209,7 +208,7 @@ async function main() {
 
   // Daily GitHub digest
   await client.subscribeWithLocalCron(
-    { sources: ['github'] },
+    { eventTypes: ['github.*'] },
     { expression: '0 9 * * *', timezone: 'America/New_York' },
     async (events) => {
       console.log(`\n=== Daily GitHub Digest (${events.length} events) ===`);
@@ -219,7 +218,7 @@ async function main() {
 
   // Slack summary every 30 minutes
   await client.subscribeWithLocalTimer(
-    { sources: ['slack'] },
+    { eventTypes: ['slack.*'] },
     { intervalMs: 30 * 60 * 1000 },
     async (events) => {
       if (events.length > 0) {

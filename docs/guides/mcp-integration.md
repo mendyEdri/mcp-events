@@ -73,7 +73,6 @@ mcpServer.tool('create_issue', {
 
 // Wrap with EventsServer to add MCPE support
 const eventsServer = new EventsServer(mcpServer, {
-  supportedSources: ['github'],
   maxSubscriptions: 100,
 });
 
@@ -85,7 +84,6 @@ eventsServer.publish('github.issue.created', {
   number: 42,
   title: 'New issue',
 }, {
-  source: 'github',
   priority: 'normal',
 });
 ```
@@ -145,7 +143,7 @@ await eventsClient.connect(transport);
 // Now you can also subscribe to events
 if (eventsClient.supportsEvents()) {
   const sub = await eventsClient.subscribe({
-    filter: { sources: ['github'], eventTypes: ['github.issue.*'] },
+    filter: { eventTypes: ['github.issue.*'] },
     delivery: { channels: ['realtime'] },
   });
 
@@ -208,7 +206,6 @@ During the MCP `initialize` handshake, an MCPE server advertises its event capab
 if (eventsClient.supportsEvents()) {
   // The server capability object contains:
   // - maxSubscriptions
-  // - supportedSources
   // - deliveryChannels
   // - features (pause, wildcards, cron, scheduled)
 }
@@ -254,7 +251,6 @@ setInterval(async () => {
 // Agent subscribes once, receives events as they happen
 await eventsClient.subscribe({
   filter: {
-    sources: ['github'],
     eventTypes: ['github.issue.created'],
   },
   delivery: { channels: ['realtime'] },

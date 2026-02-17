@@ -32,7 +32,6 @@ export class WebPushNotificationBuilder {
       esmcp: {
         eventId: event.id,
         eventType: event.type,
-        source: event.metadata.source,
       },
     });
 

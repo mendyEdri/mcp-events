@@ -54,13 +54,14 @@ However, MCP currently lacks a standardized mechanism for agents to **react** to
 
 ## Design Principles
 
-MCPE follows the same design philosophy as MCP:
+MCPE follows MCP's design philosophy and adds principles specific to LLM-driven event subscriptions:
 
 | Principle | How MCPE Implements It |
 |-----------|----------------------|
-| **Agent-Centric** | Agents control subscriptions (create, pause, resume, remove) |
+| **LLM-Native** | The LLM itself is the subscriber — subscriptions are MCP tools the LLM calls naturally |
+| **Self-Managing** | The LLM controls the full lifecycle (create, pause, resume, adjust, remove) |
+| **Schema-Driven** | LLM-readable schemas enable autonomous discovery and subscription without human configuration |
 | **Transport-Agnostic** | Works over stdio, SSE, WebSocket (same as MCP) |
-| **Schema-Driven** | LLM-friendly schemas enable reasoning about subscriptions |
 | **JSON-RPC 2.0** | Same protocol foundation as MCP |
 | **Backwards Compatible** | Extends MCP without breaking existing implementations |
 
@@ -104,7 +105,6 @@ interface ServerCapabilities {
   
   events?: {
     maxSubscriptions: number;           // Max subscriptions per client
-    supportedSources: string[];         // e.g., ["github", "slack", "gmail"]
     deliveryChannels: DeliveryChannel[]; // ["realtime", "cron", "scheduled"]
     features: {
       pause: boolean;          // Supports pause/resume
@@ -137,12 +137,7 @@ Create a new event subscription.
       filter: {
         type: "object",
         properties: {
-          sources: { 
-            type: "array", 
-            items: { type: "string" },
-            description: "Event sources to subscribe to (e.g., ['github', 'slack'])"
-          },
-          eventTypes: { 
+          eventTypes: {
             type: "array", 
             items: { type: "string" },
             description: "Event types, supports wildcards (e.g., ['github.push', 'github.issue.*'])"
@@ -334,7 +329,6 @@ Events are delivered via MCP notifications:
         number: 123
       },
       metadata: {
-        source: "github",
         sourceEventId: "gh-evt-456",
         timestamp: "2025-01-15T10:30:00Z",
         priority: "high",
@@ -385,7 +379,6 @@ interface MCPEvent {
   type: string;          // Hierarchical type (e.g., "github.issue.opened")
   data: Record<string, unknown>;  // Event payload
   metadata: {
-    source: string;      // Origin system ("github", "slack", etc.)
     sourceEventId?: string;  // Original event ID from source
     timestamp: string;   // ISO 8601 timestamp
     priority: "low" | "normal" | "high" | "critical";
@@ -400,7 +393,6 @@ Event matching uses the following rules:
 
 | Filter | Matching Logic |
 |--------|----------------|
-| `sources` | Event source must be in list |
 | `eventTypes` | Supports exact match and wildcards (`github.*`) |
 | `tags` | Any tag matches (OR logic) |
 | `priority` | Priority must be in list |
@@ -409,7 +401,6 @@ Event matching uses the following rules:
 ```typescript
 // Example: Match high-priority GitHub and Slack events tagged with "ci" or "deploy"
 {
-  sources: ["github", "slack"],
   eventTypes: ["github.push", "github.deployment.*", "slack.message"],
   tags: ["ci", "deploy"],
   priority: ["high", "critical"]
@@ -479,7 +470,6 @@ if (client.supportsEvents()) {
   // Subscribe to GitHub push events
   const sub = await client.subscribe({
     filter: {
-      sources: ["github"],
       eventTypes: ["github.push", "github.pull_request.*"],
       priority: ["high", "critical"]
     },
@@ -563,7 +553,6 @@ const server = new EventsServer({
   name: "my-events-server",
   version: "1.0.0",
   events: {
-    supportedSources: ["github", "slack"],
     maxSubscriptions: 100,
     deliveryChannels: ["realtime", "cron", "scheduled"],
     features: {
@@ -580,7 +569,6 @@ githubWebhooks.on("*", (event) => {
     type: `github.${event.type}`,
     data: event.payload,
     metadata: {
-      source: "github",
       sourceEventId: event.id,
       timestamp: new Date().toISOString(),
       priority: inferPriority(event),
@@ -613,7 +601,7 @@ Events are aggregated and delivered on a schedule.
 ```typescript
 // Daily digest at 9am Eastern
 await client.subscribe({
-  filter: { sources: ["github"] },
+  filter: { eventTypes: ["github.*"] },
   delivery: {
     channels: ["cron"],
     cronSchedule: {
@@ -672,7 +660,7 @@ Delegate event processing to an LLM agent.
 
 ```typescript
 await client.subscribe({
-  filter: { sources: ["slack"], eventTypes: ["slack.message"] },
+  filter: { eventTypes: ["slack.message"] },
   delivery: { channels: ["realtime"] },
   handler: {
     type: "agent",
@@ -748,7 +736,7 @@ eventsClient.onEvent("github.issue.*", async (event) => {
 
 ## Security Considerations
 
-1. **Subscription Authorization**: Servers should validate that clients are authorized to subscribe to specific sources/event types
+1. **Subscription Authorization**: Servers should validate that clients are authorized to subscribe to specific event types
 2. **Rate Limiting**: Servers should implement rate limits on subscriptions and events
 3. **Event Filtering**: Sensitive data should be filtered before delivery
 4. **Handler Security**: Bash handlers should be sandboxed; webhook handlers should use HTTPS
@@ -808,7 +796,6 @@ interface MCPEvent {
 }
 
 interface EventMetadata {
-  source: string;
   sourceEventId?: string;
   timestamp: string;
   priority: "low" | "normal" | "high" | "critical";
@@ -817,7 +804,6 @@ interface EventMetadata {
 
 // Filter types
 interface EventFilter {
-  sources?: string[];
   eventTypes?: string[];
   tags?: string[];
   priority?: Array<"low" | "normal" | "high" | "critical">;
@@ -890,7 +876,6 @@ interface Subscription {
 // Capability types
 interface EventsCapability {
   maxSubscriptions: number;
-  supportedSources: string[];
   deliveryChannels: Array<"realtime" | "cron" | "scheduled">;
   features: {
     pause: boolean;

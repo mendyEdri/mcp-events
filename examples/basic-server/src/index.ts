@@ -17,7 +17,6 @@ const server = new EventsServer({
   version: '1.0.0',
   events: {
     maxSubscriptions: 100,
-    supportedSources: ['github', 'slack', 'custom'],
   },
 });
 
@@ -117,7 +116,6 @@ setInterval(() => {
       commits: [{ message: 'Update README', sha: 'abc123' }],
     },
     {
-      source: 'github',
       priority: 'normal',
     }
   );

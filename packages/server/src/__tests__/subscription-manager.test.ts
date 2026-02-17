@@ -12,7 +12,7 @@ describe('SubscriptionManager', () => {
   describe('create', () => {
     it('should create a subscription', async () => {
       const request: CreateSubscriptionRequest = {
-        filter: { sources: ['github'] },
+        filter: { eventTypes: ['github.*'] },
         delivery: { channels: ['websocket'], priority: 'normal' },
       };
 
@@ -20,7 +20,7 @@ describe('SubscriptionManager', () => {
 
       expect(subscription.id).toBeDefined();
       expect(subscription.clientId).toBe('client-1');
-      expect(subscription.filter).toEqual({ sources: ['github'] });
+      expect(subscription.filter).toEqual({ eventTypes: ['github.*'] });
       expect(subscription.status).toBe('active');
     });
 
@@ -45,7 +45,7 @@ describe('SubscriptionManager', () => {
   describe('update', () => {
     it('should update a subscription', async () => {
       const request: CreateSubscriptionRequest = {
-        filter: { sources: ['github'] },
+        filter: { eventTypes: ['github.*'] },
         delivery: { channels: ['websocket'], priority: 'normal' },
       };
 
@@ -92,12 +92,12 @@ describe('SubscriptionManager', () => {
   describe('findMatchingSubscriptions', () => {
     it('should find subscriptions matching an event', async () => {
       await manager.create('client-1', {
-        filter: { sources: ['github'] },
+        filter: { eventTypes: ['github.*'] },
         delivery: { channels: ['websocket'], priority: 'normal' },
       });
 
       await manager.create('client-2', {
-        filter: { sources: ['gmail'] },
+        filter: { eventTypes: ['gmail.*'] },
         delivery: { channels: ['websocket'], priority: 'normal' },
       });
 
@@ -106,7 +106,6 @@ describe('SubscriptionManager', () => {
         type: 'github.push',
         data: {},
         metadata: {
-          source: 'github',
           timestamp: new Date().toISOString(),
           priority: 'normal',
         },
@@ -120,7 +119,7 @@ describe('SubscriptionManager', () => {
 
     it('should not match paused subscriptions', async () => {
       const sub = await manager.create('client-1', {
-        filter: { sources: ['github'] },
+        filter: { eventTypes: ['github.*'] },
         delivery: { channels: ['websocket'], priority: 'normal' },
       });
 
@@ -131,7 +130,6 @@ describe('SubscriptionManager', () => {
         type: 'github.push',
         data: {},
         metadata: {
-          source: 'github',
           timestamp: new Date().toISOString(),
           priority: 'normal',
         },

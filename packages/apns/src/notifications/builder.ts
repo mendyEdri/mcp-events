@@ -73,7 +73,6 @@ export class NotificationBuilder {
     builder.customData('esmcp', {
       eventId: event.id,
       eventType: event.type,
-      source: event.metadata.source,
     });
 
     return builder;

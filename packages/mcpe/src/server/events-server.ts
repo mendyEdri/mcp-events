@@ -49,7 +49,6 @@ export interface EventsServerConfig {
  *   version: '1.0.0',
  *   events: {
  *     maxSubscriptions: 100,
- *     supportedSources: ['github', 'slack'],
  *   },
  * });
  *
@@ -57,7 +56,7 @@ export interface EventsServerConfig {
  * server.publish({
  *   type: 'github.push',
  *   data: { repo: 'user/repo', branch: 'main' },
- *   metadata: { source: 'github', priority: 'normal' },
+ *   metadata: { priority: 'normal' },
  * });
  *
  * // Connect to transport
@@ -118,7 +117,6 @@ export class EventsServer {
   private buildCapability(options?: EventsServerOptions): EventsCapability {
     return {
       maxSubscriptions: options?.maxSubscriptions ?? DEFAULT_EVENTS_CAPABILITY.maxSubscriptions,
-      supportedSources: (options?.supportedSources ?? DEFAULT_EVENTS_CAPABILITY.supportedSources) as EventsCapability['supportedSources'],
       deliveryChannels: (options?.deliveryChannels ?? DEFAULT_EVENTS_CAPABILITY.deliveryChannels) as EventsCapability['deliveryChannels'],
       features: {
         ...DEFAULT_EVENTS_CAPABILITY.features,
@@ -472,7 +470,6 @@ export class EventsServer {
           subscriptionId,
         },
         metadata: {
-          source: 'system' as any,
           priority: 'normal',
           timestamp: new Date().toISOString(),
           tags: ['batch'],

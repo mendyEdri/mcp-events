@@ -78,7 +78,7 @@ export interface ListSubscriptionsResult {
  * if (client.supportsEvents()) {
  *   // Subscribe to events
  *   const sub = await client.subscribe({
- *     filter: { sources: ['github'], eventTypes: ['github.*'] },
+ *     filter: { eventTypes: ['github.*'] },
  *     delivery: { channels: ['realtime'] },
  *   });
  *
@@ -392,7 +392,7 @@ export class EventsClient {
    * ```typescript
    * // Daily digest at 9am
    * await client.subscribeWithLocalCron(
-   *   { sources: ['github'] },
+   *   { eventTypes: ['github.*'] },
    *   { expression: '0 9 * * *', timezone: 'America/New_York' },
    *   (events) => {
    *     console.log('Daily GitHub digest:', events);
@@ -529,7 +529,6 @@ export class EventsClient {
       type: eventType,
       data: { task },
       metadata: {
-        source: 'custom',
         priority: 'normal',
         timestamp: scheduledAt.toISOString(),
         tags: ['delayed-task'],

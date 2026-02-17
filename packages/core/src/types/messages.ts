@@ -38,7 +38,6 @@ export type ClientCapabilities = z.infer<typeof ClientCapabilitiesSchema>;
 
 export const ServerCapabilitiesSchema = z.object({
   maxSubscriptions: z.number(),
-  supportedProviders: z.array(z.string()),
 });
 
 export type ServerCapabilities = z.infer<typeof ServerCapabilitiesSchema>;

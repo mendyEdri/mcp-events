@@ -1,5 +1,4 @@
 import { z } from 'zod';
-import { EventSourceSchema } from './events.js';
 import { DeliveryChannelSchema } from './subscriptions.js';
 
 /**
@@ -19,7 +18,6 @@ export type EventsFeatures = z.infer<typeof EventsFeaturesSchema>;
  */
 export const EventsCapabilitySchema = z.object({
   maxSubscriptions: z.number().default(100).describe('Maximum subscriptions per client'),
-  supportedSources: z.array(EventSourceSchema).describe('Event sources this server supports'),
   deliveryChannels: z.array(DeliveryChannelSchema).default(['realtime']).describe('Supported delivery channels'),
   features: EventsFeaturesSchema.default({}).describe('Optional feature flags'),
 });
@@ -31,7 +29,6 @@ export type EventsCapability = z.infer<typeof EventsCapabilitySchema>;
  */
 export interface EventsServerOptions {
   maxSubscriptions?: number;
-  supportedSources?: string[];
   deliveryChannels?: string[];
   features?: Partial<EventsFeatures>;
 }
@@ -65,7 +62,6 @@ export const MCPE_TOOLS = {
  */
 export const DEFAULT_EVENTS_CAPABILITY: EventsCapability = {
   maxSubscriptions: 100,
-  supportedSources: ['github', 'gmail', 'slack', 'custom'],
   deliveryChannels: ['realtime', 'cron', 'scheduled'],
   features: {
     pause: true,

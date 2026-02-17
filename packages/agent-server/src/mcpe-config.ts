@@ -109,7 +109,7 @@ export function formatSubscriptionsForDisplay(): string {
   for (const sub of subs) {
     const status = sub.enabled !== false ? 'enabled' : 'disabled';
     const handlerType = sub.handler.type;
-    const filters = sub.filter.eventTypes?.join(', ') || sub.filter.sources?.join(', ') || 'all';
+    const filters = sub.filter.eventTypes?.join(', ') || 'all';
 
     lines.push(`- ${sub.name} [${status}]`);
     lines.push(`  Handler: ${handlerType}`);
@@ -135,7 +135,6 @@ export function getSubscriptionsJSON(): {
     handlerType: string;
     filter: {
       eventTypes?: string[];
-      sources?: string[];
       priority?: string[];
     };
     delivery?: {
@@ -155,7 +154,6 @@ export function getSubscriptionsJSON(): {
       handlerType: s.handler.type,
       filter: {
         eventTypes: s.filter.eventTypes,
-        sources: s.filter.sources,
         priority: s.filter.priority,
       },
       delivery: s.delivery

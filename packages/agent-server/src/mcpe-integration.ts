@@ -422,7 +422,6 @@ export class MCPEIntegration {
       type: 'local.delayed.task',
       data: { task },
       metadata: {
-        source: 'custom',
         priority: 'normal',
         timestamp: scheduledAt.toISOString(),
         tags: ['local-timer'],

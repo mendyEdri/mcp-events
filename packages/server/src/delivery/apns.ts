@@ -119,7 +119,6 @@ export class APNSDelivery {
           eventId: event.id,
           eventType: event.type,
           subscriptionId: subscription.id,
-          source: event.metadata.source,
         },
       },
       topic: this.apnsOptions.bundleId,
@@ -144,9 +143,10 @@ export class APNSDelivery {
   }
 
   private formatAlertTitle(event: ESMCPEvent): string {
-    const source = event.metadata.source;
-    const type = event.type.split('.').pop() || event.type;
-    return `${source}: ${type}`;
+    const parts = event.type.split('.');
+    const prefix = parts[0] || event.type;
+    const action = parts.pop() || event.type;
+    return `${prefix}: ${action}`;
   }
 
   private formatAlertBody(event: ESMCPEvent): string {

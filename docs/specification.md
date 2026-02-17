@@ -10,13 +10,14 @@ MCPE (MCP Events) is an open protocol that extends the Model Context Protocol (M
 
 ### 1.1 Motivation
 
-MCP provides tools and resources for AI agents, but lacks a standardized mechanism for agents to receive asynchronous events. Agents that need to react to external changes must either poll (inefficient) or use ad-hoc integrations (non-standard). MCPE fills this gap with a subscription-based event system that follows MCP's design principles.
+MCP provides tools and resources for AI agents, but lacks a standardized mechanism for agents to receive asynchronous events. Agents that need to react to external changes must either poll (inefficient) or use ad-hoc integrations (non-standard). MCPE fills this gap with a subscription-based event system where the LLM itself manages subscriptions through MCP tool calls.
 
 ### 1.2 Design Goals
 
-1. **Agent-Centric**: Agents control their subscriptions (create, pause, resume, update, delete)
-2. **Transport-Agnostic**: Works over any MCP-compatible transport (stdio, WebSocket, SSE)
-3. **Schema-Driven**: All operations have JSON Schema definitions for LLM reasoning
+1. **LLM-Native**: The LLM itself is the subscriber — subscriptions are MCP tools the LLM calls naturally
+2. **Self-Managing**: The LLM controls the full subscription lifecycle (create, pause, resume, adjust, delete)
+3. **Schema-Driven**: LLM-readable schemas enable autonomous discovery and subscription without human configuration
+4. **Transport-Agnostic**: Works over any MCP-compatible transport (stdio, WebSocket, SSE)
 4. **Backward-Compatible**: MCPE servers work with standard MCP clients; MCPE clients work with standard MCP servers
 5. **Open Standards**: Built on JSON-RPC 2.0, cron expressions, ISO 8601, UUID v4
 
@@ -99,7 +100,6 @@ interface MCPECapabilities {
   };
 
   filters: {
-    supportedSources: string[];
     supportsWildcardTypes: boolean;
     supportsTagFiltering: boolean;
     supportsPriorityFiltering: boolean;
@@ -138,7 +138,6 @@ interface MCPEvent {
 
 ```typescript
 interface EventMetadata {
-  source: EventSource;           // 'github' | 'gmail' | 'slack' | 'custom'
   sourceEventId?: string;        // Original event ID from source system
   timestamp: string;             // ISO 8601 datetime
   priority: EventPriority;       // 'low' | 'normal' | 'high' | 'critical'
@@ -187,7 +186,6 @@ interface Subscription {
 
 ```typescript
 interface EventFilter {
-  sources?: EventSource[];       // OR within, AND across fields
   eventTypes?: string[];         // Supports wildcards
   tags?: string[];               // Match any tag
   priority?: EventPriority[];    // Match any priority
@@ -459,7 +457,7 @@ MCPE relies on the underlying transport for authentication. Servers SHOULD authe
 
 ### 11.2 Authorization
 
-Servers SHOULD implement authorization to control which event sources and types each client can subscribe to.
+Servers SHOULD implement authorization to control which event types each client can subscribe to.
 
 ### 11.3 Rate Limiting
 

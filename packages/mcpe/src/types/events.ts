@@ -2,18 +2,6 @@ import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';
 
 /**
- * Event source - identifies where events originate
- */
-export const EventSourceSchema = z.enum([
-  'github',
-  'gmail',
-  'slack',
-  'custom',
-]);
-
-export type EventSource = z.infer<typeof EventSourceSchema>;
-
-/**
  * Event priority levels
  */
 export const EventPrioritySchema = z.enum(['low', 'normal', 'high', 'critical']);
@@ -24,7 +12,6 @@ export type EventPriority = z.infer<typeof EventPrioritySchema>;
  * Event metadata - standardized metadata attached to every event
  */
 export const EventMetadataSchema = z.object({
-  source: EventSourceSchema,
   sourceEventId: z.string().optional(),
   timestamp: z.string().datetime(),
   priority: EventPrioritySchema.default('normal'),
@@ -49,7 +36,6 @@ export type MCPEvent = z.infer<typeof MCPEventSchema>;
  * Event filter for subscriptions - defines which events to receive
  */
 export const EventFilterSchema = z.object({
-  sources: z.array(EventSourceSchema).optional(),
   eventTypes: z.array(z.string()).optional(),
   tags: z.array(z.string()).optional(),
   priority: z.array(EventPrioritySchema).optional(),
@@ -62,19 +48,11 @@ export type EventFilter = z.infer<typeof EventFilterSchema>;
  *
  * Matching rules:
  * - Empty filter matches all events
- * - sources: event source must be in the list
  * - eventTypes: supports exact match or wildcard (e.g., "github.*")
  * - tags: event must have at least one matching tag (OR)
  * - priority: event priority must be in the list
  */
 export function matchesFilter(event: MCPEvent, filter: EventFilter): boolean {
-  // Source filter
-  if (filter.sources && filter.sources.length > 0) {
-    if (!filter.sources.includes(event.metadata.source)) {
-      return false;
-    }
-  }
-
   // Event type filter (supports wildcards)
   if (filter.eventTypes && filter.eventTypes.length > 0) {
     const matches = filter.eventTypes.some((pattern) => {

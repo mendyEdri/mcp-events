@@ -213,7 +213,6 @@ export class ASPClient {
         },
         filters: {
           ...defaultASPCapabilities.filters,
-          supportedSources: this._initializeResult.capabilities.supportedProviders,
         },
       };
     }
@@ -233,7 +232,7 @@ export class ASPClient {
    * @example
    * ```typescript
    * const caps = await client.getCapabilities();
-   * console.log('Supported sources:', caps.filters.supportedSources);
+   * console.log('Supports wildcards:', caps.filters.supportsWildcardTypes);
    * console.log('Max subscriptions:', caps.subscriptions.maxActive);
    * ```
    */
@@ -287,7 +286,6 @@ export class ASPClient {
    * ```typescript
    * const sub = await client.subscribe({
    *   filter: {
-   *     sources: ['github'],
    *     eventTypes: ['github.push', 'github.pull_request.*'],
    *     priority: ['high', 'critical']
    *   },

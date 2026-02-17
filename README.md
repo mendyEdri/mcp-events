@@ -33,10 +33,11 @@ MCPE extends MCP's design philosophy to event subscriptions:
 
 ### Design Principles
 
-1. **Agent-Centric** - Agents decide what to subscribe to, when to pause, and when to unsubscribe
-2. **Transport-Agnostic** - Works over WebSocket, SSE, or stdio (like MCP)
-3. **Schema-Driven** - LLM-friendly schemas enable agents to reason about subscriptions
-4. **Open Standards** - Built on JSON-RPC 2.0, Web Push (RFC 8030), and SSE
+1. **LLM-Native** - The LLM itself is the subscriber, creating and managing subscriptions through MCP tool calls
+2. **Self-Managing** - The LLM controls the full lifecycle: subscribe, pause, resume, adjust filters, unsubscribe
+3. **Schema-Driven** - LLM-readable schemas enable autonomous discovery and subscription without human configuration
+4. **Transport-Agnostic** - Works over WebSocket, SSE, or stdio (like MCP)
+5. **Open Standards** - Built on JSON-RPC 2.0, Web Push (RFC 8030), and SSE
 
 ## Protocol Overview
 
@@ -89,7 +90,6 @@ MCPE extends MCP's design philosophy to event subscriptions:
     "supportsExpiration": true
   },
   "filters": {
-    "supportedSources": ["github", "slack", "gmail"],
     "supportsWildcardTypes": true,    // e.g., "github.*"
     "supportsTagFiltering": true,
     "supportsPriorityFiltering": true
@@ -116,7 +116,6 @@ MCPE extends MCP's design philosophy to event subscriptions:
       "type": "object",
       "properties": {
         "filter": {
-          "sources": { "enum": ["github", "slack", "gmail"] },
           "eventTypes": { "description": "Supports wildcards like github.*" },
           "priority": { "enum": ["low", "normal", "high", "critical"] }
         },
@@ -135,7 +134,7 @@ MCPE extends MCP's design philosophy to event subscriptions:
 ```typescript
 // Create subscription
 { "method": "subscriptions/create", "params": {
-    "filter": { "sources": ["github"], "eventTypes": ["github.issue.*"] },
+    "filter": { "eventTypes": ["github.issue.*"] },
     "delivery": { "channels": ["websocket"], "priority": "realtime" }
 }}
 
@@ -160,7 +159,6 @@ MCPE extends MCP's design philosophy to event subscriptions:
       "type": "github.issue.opened",
       "data": { "title": "Bug report", "repo": "org/repo" },
       "metadata": {
-        "source": "github",
         "priority": "high",
         "timestamp": "2025-01-15T10:30:00Z"
       }
@@ -183,7 +181,7 @@ await client.connect();
 
 // Discover capabilities (agent introspection)
 const caps = await client.getCapabilities();
-console.log('Available sources:', caps.filters.supportedSources);
+console.log('Available filters:', caps.filters);
 
 // Get schemas for LLM reasoning
 const schemas = await client.getSchema(['subscribe', 'unsubscribe']);
@@ -191,7 +189,6 @@ const schemas = await client.getSchema(['subscribe', 'unsubscribe']);
 // Subscribe to events
 const subscription = await client.subscribe({
   filter: {
-    sources: ['github'],
     eventTypes: ['github.push', 'github.pull_request.*'],
     priority: ['high', 'critical']
   },
