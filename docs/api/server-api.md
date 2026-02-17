@@ -9,7 +9,7 @@ Complete API reference for the `EventsServer` class.
 Create a new MCPE server with full configuration:
 
 ```typescript
-import { EventsServer } from '@mcpe/server';
+import { EventsServer } from '@mcpe/core';
 
 const server = new EventsServer({
   name: 'my-server',
@@ -49,7 +49,7 @@ Wrap an existing MCP server:
 
 ```typescript
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { EventsServer } from '@mcpe/server';
+import { EventsServer } from '@mcpe/core';
 
 const mcpServer = new McpServer({ name: 'my-server', version: '1.0.0' });
 const server = new EventsServer(mcpServer, {

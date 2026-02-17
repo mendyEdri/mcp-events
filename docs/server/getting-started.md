@@ -5,7 +5,7 @@ This guide walks you through setting up an MCPE server that can accept subscript
 ## Installation
 
 ```bash
-npm install @mcpe/core @mcpe/server
+npm install @mcpe/core
 ```
 
 ## Basic Server Setup
@@ -13,7 +13,7 @@ npm install @mcpe/core @mcpe/server
 The simplest way to create an MCPE server is with the `EventsServer` constructor:
 
 ```typescript
-import { EventsServer } from '@mcpe/server';
+import { EventsServer } from '@mcpe/core';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 
 const server = new EventsServer({
@@ -38,7 +38,7 @@ If you already have an `McpServer` instance, you can add MCPE support to it:
 
 ```typescript
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { EventsServer } from '@mcpe/server';
+import { EventsServer } from '@mcpe/core';
 
 const mcpServer = new McpServer({
   name: 'my-mcp-server',
@@ -165,7 +165,7 @@ await server.close();
 Here is a complete server that publishes GitHub-like events:
 
 ```typescript
-import { EventsServer } from '@mcpe/server';
+import { EventsServer } from '@mcpe/core';
 import { createEvent } from '@mcpe/core';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 

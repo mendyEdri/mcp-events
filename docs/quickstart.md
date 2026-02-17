@@ -10,7 +10,7 @@ Get up and running with MCPE in under five minutes. This guide walks you through
 ## Installation
 
 ```bash
-npm install @mcpe/core @mcpe/server @mcpe/client
+npm install @mcpe/core
 ```
 
 ## Step 1: Create an Event Server
@@ -18,7 +18,8 @@ npm install @mcpe/core @mcpe/server @mcpe/client
 Create a file called `server.ts`:
 
 ```typescript
-import { EventsServer } from '@mcpe/server';
+import { EventsServer } from '@mcpe/core';
+import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 
 const server = new EventsServer({
   name: 'my-mcpe-server',
@@ -49,7 +50,8 @@ setInterval(() => {
 Create a file called `client.ts`:
 
 ```typescript
-import { EventsClient } from '@mcpe/client';
+import { EventsClient } from '@mcpe/core';
+import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 
 const client = new EventsClient({
   name: 'my-mcpe-client',

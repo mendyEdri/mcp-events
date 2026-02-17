@@ -468,7 +468,8 @@ class EventsClient {
 ### Usage Example
 
 ```typescript
-import { EventsClient, StdioClientTransport } from "@mcpe/client";
+import { EventsClient } from "@mcpe/core";
+import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 
 const client = new EventsClient({ name: "my-agent", version: "1.0.0" });
 await client.connect(new StdioClientTransport({ command: "mcpe-server" }));
@@ -555,7 +556,8 @@ class EventsServer {
 ### Usage Example
 
 ```typescript
-import { EventsServer, StdioServerTransport } from "@mcpe/server";
+import { EventsServer } from "@mcpe/core";
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 
 const server = new EventsServer({
   name: "my-events-server",
@@ -675,7 +677,7 @@ await client.subscribe({
   handler: {
     type: "agent",
     systemPrompt: "Summarize this Slack message and determine if it requires action.",
-    model: "claude-3-sonnet",
+    model: "claude-sonnet-4-5-20250929",
     tools: ["slack_reply", "create_task"]
   }
 });
@@ -765,9 +767,9 @@ A complete reference implementation is available at: [mcp-event repository]
 
 ```
 packages/
-├── @mcpe/core       # Protocol types, schemas, and utilities
-├── @mcpe/server     # EventsServer wrapper for MCP servers
-├── @mcpe/client     # EventsClient wrapper for MCP clients
+├── @mcpe/core           # Protocol types, schemas, server, and client
+│   ├── @mcpe/core/server  # EventsServer wrapper for MCP servers
+│   └── @mcpe/core/client  # EventsClient wrapper for MCP clients
 └── examples/        # Demo applications
 ```
 

@@ -160,7 +160,7 @@ events: {
 ## Complete Configuration Example
 
 ```typescript
-import { EventsServer } from '@mcpe/server';
+import { EventsServer } from '@mcpe/core';
 
 const server = new EventsServer({
   name: 'production-event-server',

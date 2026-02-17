@@ -9,7 +9,7 @@ Complete API reference for the `EventsClient` class.
 Create a new MCPE client:
 
 ```typescript
-import { EventsClient } from '@mcpe/client';
+import { EventsClient } from '@mcpe/core';
 
 const client = new EventsClient({
   name: 'my-client',
@@ -29,7 +29,7 @@ Wrap an existing MCP client:
 
 ```typescript
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
-import { EventsClient } from '@mcpe/client';
+import { EventsClient } from '@mcpe/core';
 
 const mcpClient = new Client({ name: 'my-client', version: '1.0.0' });
 const client = new EventsClient(mcpClient);

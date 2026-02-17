@@ -184,7 +184,7 @@ A common pattern is to receive webhooks from external systems and publish them a
 
 ```typescript
 import express from 'express';
-import { EventsServer } from '@mcpe/server';
+import { EventsServer } from '@mcpe/core';
 
 const app = express();
 const server = new EventsServer({ name: 'webhook-bridge', version: '1.0.0' });

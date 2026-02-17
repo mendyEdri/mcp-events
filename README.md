@@ -229,11 +229,12 @@ This repository contains a working reference implementation:
 
 ```
 packages/
-├── core/      # @mcpe/core - Protocol types and schemas
-├── client/    # @mcpe/client - MCPEClient SDK
-├── server/    # @mcpe/server - EventHub reference server
-├── sse/       # @mcpe/sse - SSE transport
-└── webpush/   # @mcpe/webpush - Web Push transport
+├── mcpe/      # @mcpe/core - MCP Events extension (server + client)
+├── core/      # @esmcp/core - Protocol types and schemas
+├── client/    # @esmcp/client - ESMCP Client SDK
+├── server/    # @esmcp/server - EventHub reference server
+├── sse/       # @esmcp/sse - SSE transport
+└── webpush/   # @esmcp/webpush - Web Push transport
 ```
 
 ### Quick Start

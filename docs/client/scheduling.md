@@ -192,7 +192,7 @@ await client.subscribeWithLocalCron(
 ## Complete Example
 
 ```typescript
-import { EventsClient } from '@mcpe/client';
+import { EventsClient } from '@mcpe/core';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 
 async function main() {

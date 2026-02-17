@@ -48,7 +48,7 @@ await server.connect(transport);
 
 ```typescript
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { EventsServer } from '@mcpe/server';
+import { EventsServer } from '@mcpe/core';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 
 const mcpServer = new McpServer({
@@ -122,7 +122,7 @@ const result = await client.callTool('search_issues', {
 
 ```typescript
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
-import { EventsClient } from '@mcpe/client';
+import { EventsClient } from '@mcpe/core';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 
 const mcpClient = new Client({

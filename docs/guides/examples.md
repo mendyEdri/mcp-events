@@ -9,7 +9,7 @@ A server that publishes GitHub webhook events and a client that monitors them.
 ### Server
 
 ```typescript
-import { EventsServer } from '@mcpe/server';
+import { EventsServer } from '@mcpe/core';
 import { createEvent } from '@mcpe/core';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import express from 'express';
@@ -59,7 +59,7 @@ app.listen(3000);
 ### Client
 
 ```typescript
-import { EventsClient } from '@mcpe/client';
+import { EventsClient } from '@mcpe/core';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 
 const client = new EventsClient({
@@ -115,7 +115,7 @@ console.log('Monitoring GitHub events...');
 Aggregate events from multiple sources with different delivery modes.
 
 ```typescript
-import { EventsClient } from '@mcpe/client';
+import { EventsClient } from '@mcpe/core';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 
 const client = new EventsClient({
@@ -184,7 +184,7 @@ console.log('Aggregator running...');
 Forward MCPE events to external HTTP endpoints.
 
 ```typescript
-import { EventsClient } from '@mcpe/client';
+import { EventsClient } from '@mcpe/core';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 
 const client = new EventsClient({
@@ -249,7 +249,7 @@ console.log('Webhook bridge active');
 Monitor CI/CD events and react to failures.
 
 ```typescript
-import { EventsClient } from '@mcpe/client';
+import { EventsClient } from '@mcpe/core';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 
 const client = new EventsClient({
@@ -311,7 +311,7 @@ console.log('CI/CD monitor active');
 Use an LLM agent handler to automatically triage incoming issues.
 
 ```typescript
-import { EventsClient } from '@mcpe/client';
+import { EventsClient } from '@mcpe/core';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 
 const client = new EventsClient({
@@ -361,7 +361,7 @@ console.log('Issue triage bot active');
 Execute shell scripts in response to events.
 
 ```typescript
-import { EventsClient } from '@mcpe/client';
+import { EventsClient } from '@mcpe/core';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 
 const client = new EventsClient({
@@ -426,7 +426,7 @@ console.log('Automation handlers active');
 Set up time-based reminders and delayed processing.
 
 ```typescript
-import { EventsClient } from '@mcpe/client';
+import { EventsClient } from '@mcpe/core';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 
 const client = new EventsClient({
@@ -517,7 +517,7 @@ console.log('Reminder system active');
 Demonstrating pause, resume, update, and expiration.
 
 ```typescript
-import { EventsClient } from '@mcpe/client';
+import { EventsClient } from '@mcpe/core';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 
 const client = new EventsClient({

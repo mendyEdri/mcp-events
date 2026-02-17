@@ -5,13 +5,13 @@ This guide walks you through setting up an MCPE client that connects to a server
 ## Installation
 
 ```bash
-npm install @mcpe/core @mcpe/client
+npm install @mcpe/core
 ```
 
 ## Basic Client Setup
 
 ```typescript
-import { EventsClient } from '@mcpe/client';
+import { EventsClient } from '@mcpe/core';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 
 const client = new EventsClient({
@@ -33,7 +33,7 @@ If you already have an MCP `Client` instance, you can add MCPE support to it:
 
 ```typescript
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
-import { EventsClient } from '@mcpe/client';
+import { EventsClient } from '@mcpe/core';
 
 const mcpClient = new Client({
   name: 'my-mcp-client',
@@ -174,7 +174,7 @@ await client.close();
 ## Complete Example
 
 ```typescript
-import { EventsClient } from '@mcpe/client';
+import { EventsClient } from '@mcpe/core';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 
 async function main() {
