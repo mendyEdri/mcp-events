@@ -9,7 +9,7 @@ export default defineConfig({
       { text: 'Guide', link: '/introduction' },
       { text: 'API Reference', link: '/api/server-api' },
       { text: 'Specification', link: '/specification' },
-      { text: 'GitHub', link: 'https://github.com/anthropics/mcp-event' },
+      { text: 'GitHub', link: 'https://github.com/mendyEdri/mcp-events' },
     ],
     sidebar: [
       {
@@ -71,7 +71,7 @@ export default defineConfig({
       },
     ],
     socialLinks: [
-      { icon: 'github', link: 'https://github.com/anthropics/mcp-event' },
+      { icon: 'github', link: 'https://github.com/mendyEdri/mcp-events' },
     ],
     search: {
       provider: 'local',
