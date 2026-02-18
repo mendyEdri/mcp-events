@@ -1,6 +1,6 @@
 #!/usr/bin/env npx tsx
 /**
- * Slack Notifier - Real-World ESMCP Subscriber
+ * Slack Notifier - Real-World ASP Subscriber
  *
  * Sends Slack messages for high-priority events.
  *
@@ -15,11 +15,11 @@
  *   SLACK_BOT_TOKEN=xoxb-xxx SLACK_CHANNEL=#alerts pnpm start
  */
 
-import { ESMCPClient } from '@esmcp/client';
+import { ASPClient, WebSocketTransport } from '@esmcp/client';
 import type { ESMCPEvent } from '@esmcp/core';
 
 // Configuration
-const ESMCP_SERVER = process.env.ESMCP_SERVER || 'ws://localhost:8080';
+const ASP_SERVER = process.env.ASP_SERVER || process.env.ESMCP_SERVER || 'ws://localhost:8080';
 const SLACK_BOT_TOKEN = process.env.SLACK_BOT_TOKEN || '';
 const SLACK_CHANNEL = process.env.SLACK_CHANNEL || '#general';
 const SUBSCRIBER_NAME = process.env.SUBSCRIBER_NAME || 'slack-notifier';
@@ -161,10 +161,16 @@ async function main() {
     console.log();
   }
 
-  console.log(`🔌 Connecting to ${ESMCP_SERVER}...`);
+  console.log(`🔌 Connecting to ${ASP_SERVER}...`);
 
-  const client = new ESMCPClient({
-    serverUrl: ESMCP_SERVER,
+  const transport = new WebSocketTransport({
+    url: ASP_SERVER,
+    reconnect: true,
+    reconnectInterval: 5000,
+  });
+
+  const client = new ASPClient({
+    transport,
     clientInfo: {
       name: SUBSCRIBER_NAME,
       version: '1.0.0',
@@ -172,8 +178,6 @@ async function main() {
     capabilities: {
       websocket: true,
     },
-    reconnect: true,
-    reconnectInterval: 5000,
   });
 
   // Handle events
@@ -196,7 +200,7 @@ async function main() {
 
   // Connect and subscribe
   await client.connect();
-  console.log('✅ Connected to ESMCP server');
+  console.log('✅ Connected to ASP server');
   console.log(`   Server: ${client.serverInfo?.name}`);
   console.log();
 
